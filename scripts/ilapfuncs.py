@@ -1,4 +1,5 @@
 # common standard imports
+from typing import Literal
 import codecs
 import csv
 from datetime import *
@@ -293,10 +294,11 @@ def logdevinfo(message=""):
     with open(OutputParameters.screen_output_file_path_devinfo, 'a', encoding='utf8') as b:
         b.write(message + '<br>' + OutputParameters.nl)
 
-
-def lava_datatype(datatype, value):
-    """datatype: string --> 'datetime' or 'phonenumber'"""
-    return {"value": value, "type": datatype}
+def lava_datatype(datatype: Literal["datetime", "phonenumber"], value):
+    if datatype == "datetime" or datatype == "phonenumber":
+        return {"value": value, "type": datatype}
+    else:
+        return value
 
 def lava(report_folder, data_headers, data_list, filename):
     report_folder = report_folder.rstrip('/')
