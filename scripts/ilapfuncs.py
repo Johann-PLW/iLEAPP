@@ -293,6 +293,26 @@ def logdevinfo(message=""):
     with open(OutputParameters.screen_output_file_path_devinfo, 'a', encoding='utf8') as b:
         b.write(message + '<br>' + OutputParameters.nl)
 
+
+def lava_datatype(datatype, value):
+    """datatype: string --> 'datetime' or 'phonenumber'"""
+    return {"value": value, "type": datatype}
+
+def lava(report_folder, data_headers, data_list, filename):
+    report_folder = report_folder.rstrip('/')
+    report_folder = report_folder.rstrip('\\')
+    report_folder_base, tail = os.path.split(report_folder)
+    lava_report_folder = os.path.join(report_folder_base, '_data')
+
+    if os.path.isdir(lava_report_folder):
+        pass
+    else:
+        os.makedirs(lava_report_folder)
+    
+    json_data = {"headers": data_headers, "data": [data for data in data_list]}
+    with open(os.path.join(lava_report_folder, filename +'.json'), 'w', encoding='utf-8') as json_file:
+        json.dump(json_data, json_file, ensure_ascii=False)
+            
 def tsv(report_folder, data_headers, data_list, tsvname):
     report_folder = report_folder.rstrip('/')
     report_folder = report_folder.rstrip('\\')

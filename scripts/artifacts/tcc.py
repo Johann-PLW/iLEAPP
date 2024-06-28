@@ -15,7 +15,7 @@ __artifacts_v2__ = {
 
 
 from scripts.artifact_report import ArtifactHtmlReport
-from scripts.ilapfuncs import logfunc, tsv, timeline, is_platform_windows, open_sqlite_db_readonly, does_column_exist_in_db, convert_ts_human_to_utc, convert_utc_human_to_timezone
+from scripts.ilapfuncs import logfunc, lava_datatype, lava, tsv, timeline, is_platform_windows, open_sqlite_db_readonly, does_column_exist_in_db, convert_ts_human_to_utc, convert_utc_human_to_timezone
 
 def get_tcc(files_found, report_folder, seeker, wrap_text, timezone_offset):
     for file_found in files_found:
@@ -66,13 +66,17 @@ def get_tcc(files_found, report_folder, seeker, wrap_text, timezone_offset):
     usageentries = len(all_rows)
     if usageentries > 0:
         data_list =[]
+        json_data_list =[]
         for row in all_rows:
             if last_modified_timestamp:
                 timestamp = convert_ts_human_to_utc(row[0])
-                timestamp = convert_utc_human_to_timezone(timestamp,timezone_offset)        
-                data_list.append((timestamp, row[1], row[2].replace("kTCCService",""), row[3]))
+                timestamp = convert_utc_human_to_timezone(timestamp,timezone_offset)
+                data_list.append((timestamp, row[1], row[2].replace("kTCCService",""), row[3]))                
+                json_data_list.append((lava_datatype("datetime", row[0]), row[1], 
+                                       row[2].replace("kTCCService",""), row[3]))                
             else:
                 data_list.append((row[1], row[2].replace("kTCCService",""), row[3], row[4]))
+                json_data_list.append((row[1], row[2].replace("kTCCService",""), row[3], row[4]))
 
     if usageentries > 0:
         description = "Applications permissions"
@@ -85,6 +89,10 @@ def get_tcc(files_found, report_folder, seeker, wrap_text, timezone_offset):
             data_headers = ('Bundle ID','Service','Access','Prompt Count')
         report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
         report.end_artifact_report()
+
+        json_name = "TCC - Permissions"
+        lava(report_folder, data_headers, json_data_list, json_name)
+        
         tsvname = 'TCC - Permissions'
         tsv(report_folder, data_headers, data_list, tsvname)
         
