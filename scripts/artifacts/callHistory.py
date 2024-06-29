@@ -8,7 +8,7 @@ __artifacts_v2__ = {
         "requirements": "none",
         "category": "Call History",
         "notes": "",
-        "paths": ('**/CallHistory.storedata*','**/call_history.db',),
+        "paths": ("**/CallHistory.storedata*","**/call_history.db",),
         "function": "get_callHistory"
     }
 }
@@ -19,12 +19,12 @@ __artifacts_v2__ = {
 # Additional details published within "Maximizing iOS Call Log Timestamps and Call Duration Effectiveness: Will You Answer the Call?" at https://sqlmcgee.wordpress.com/2022/11/30/maximizing-ios-call-log-timestamps-and-call-duration-effectiveness-will-you-answer-the-call/
 
 from scripts.artifact_report import ArtifactHtmlReport
-from scripts.ilapfuncs import logfunc, tsv, timeline, open_sqlite_db_readonly, convert_ts_human_to_utc, convert_utc_human_to_timezone, convert_bytes_to_unit
+from scripts.ilapfuncs import logfunc, lava_datatype, lava, tsv, timeline, open_sqlite_db_readonly, convert_ts_human_to_utc, convert_utc_human_to_timezone, convert_bytes_to_unit
 
 def get_callHistory(files_found, report_folder, seeker, wrap_text, timezone_offset):
 
     #call_history.db schema taken from here https://avi.alkalay.net/2011/12/iphone-call-history.html 
-    query = '''
+    query = """
     select
     datetime(ZDATE+978307200,'unixepoch'),
     CASE
@@ -58,9 +58,9 @@ def get_callHistory(files_found, report_folder, seeker, wrap_text, timezone_offs
     upper(ZISO_COUNTRY_CODE),
     ZLOCATION
     from ZCALLRECORD
-    '''
+    """
 
-    query_old = '''
+    query_old = """
     select
     datetime(date, 'unixepoch'),
     CASE
@@ -87,14 +87,14 @@ def get_callHistory(files_found, report_folder, seeker, wrap_text, timezone_offs
     country_code,
     'N/A' as ZLOCATION
     from call
-    '''
+    """
 
     for file_found in files_found:
         file_found = str(file_found)
     
-        if file_found.endswith('.storedata'):
+        if file_found.endswith(".storedata"):
             break
-        elif file_found.endswith('.db'):
+        elif file_found.endswith(".db"):
             query = query_old
             break
     
@@ -104,16 +104,17 @@ def get_callHistory(files_found, report_folder, seeker, wrap_text, timezone_offs
 
     all_rows = cursor.fetchall()
     usageentries = len(all_rows)
-    data_list = []
     
-    if usageentries > 0:
-        
+    if usageentries > 0:        
+        data_list = []
+        json_data_list = []
+
         for row in all_rows:
             starting_time = convert_ts_human_to_utc(row[0])
             starting_time = convert_utc_human_to_timezone(starting_time,timezone_offset)
 
             ending_time = row[1]
-            if ending_time != 'No Call Duration':
+            if ending_time != "No Call Duration":
                 ending_time = convert_ts_human_to_utc(row[1])
                 ending_time = convert_utc_human_to_timezone(ending_time,timezone_offset)
 
@@ -128,21 +129,27 @@ def get_callHistory(files_found, report_folder, seeker, wrap_text, timezone_offs
 
             data_list.append((starting_time, ending_time, row[2], row[3], row[4], an, row[6], 
                               row[7], facetime_data, row[9], row[10], row[11]))
+            json_data_list.append((lava_datatype("datetime", row[0]), lava_datatype("datetime", row[1]), 
+                                   row[2], row[3], row[4], lava_datatype("phonenumber", an), row[6], row[7], 
+                                   facetime_data, row[9], row[10], row[11]))
 
-        report = ArtifactHtmlReport('Call History')
-        report.start_artifact_report(report_folder, 'Call History')
+        artifact_name = "Call History"
+        report = ArtifactHtmlReport(artifact_name)
+        report.start_artifact_report(report_folder, artifact_name)
         report.add_script()
-        data_headers = ('Starting Timestamp', 'Ending Timestamp', 'Service Provider', 'Call Type', 'Call Direction', 
-                        'Phone Number', 'Answered', 'Call Duration', 'FaceTime Data', 'Disconnected Cause', 
-                        'ISO Country Code', 'Location')
+        data_headers = ("Starting Timestamp", "Ending Timestamp", "Service Provider", "Call Type", "Call Direction", 
+                        "Phone Number", "Answered", "Call Duration", "FaceTime Data", "Disconnected Cause", 
+                        "ISO Country Code", "Location")
         report.write_artifact_data_table(data_headers, data_list, file_found)
         report.end_artifact_report()
+
+        lava(report_folder, data_headers, json_data_list, artifact_name)
         
-        tsvname = 'Call History'
-        tsv(report_folder, data_headers, data_list, tsvname)
+        tsv(report_folder, data_headers, data_list, artifact_name)
         
-        tlactivity = 'Call History'
-        timeline(report_folder, tlactivity, data_list, data_headers)
+        timeline(report_folder, artifact_name, data_list, data_headers)
     else:
-        logfunc('No Call History data available')
+        logfunc("No Call History data available")
+    
+    db.close()
 
