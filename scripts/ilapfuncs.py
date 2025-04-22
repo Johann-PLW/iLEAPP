@@ -612,8 +612,8 @@ def does_view_exist_in_db(path, table_name):
 
 
 def tsv(report_folder, data_headers, data_list, tsvname, source_file=None):
-    report_folder = report_folder.rstrip('/')
-    report_folder = report_folder.rstrip('\\')
+    # report_folder = report_folder.rstrip('/')
+    # report_folder = report_folder.rstrip('\\')
     report_folder_base = os.path.dirname(os.path.dirname(report_folder))
     tsv_report_folder = os.path.join(report_folder_base, '_TSV Exports')
 
@@ -630,8 +630,8 @@ def tsv(report_folder, data_headers, data_list, tsvname, source_file=None):
             tsv_writer.writerow(i)
             
 def timeline(report_folder, tlactivity, data_list, data_headers):
-    report_folder = report_folder.rstrip('/')
-    report_folder = report_folder.rstrip('\\')
+    # report_folder = report_folder.rstrip('/')
+    # report_folder = report_folder.rstrip('\\')
     report_folder_base = os.path.dirname(os.path.dirname(report_folder))
     tl_report_folder = os.path.join(report_folder_base, '_Timeline')
 

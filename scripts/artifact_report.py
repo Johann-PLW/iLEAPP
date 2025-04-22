@@ -85,10 +85,10 @@ class ArtifactHtmlReport:
         if write_total:
             self.write_minor_header(f'Total number of entries: {num_entries}', 'h6')
         if write_location:
-            if sys.platform == 'win32':
-                source_path = source_path.replace('/', '\\')
-            if source_path.startswith('\\\\?\\'):
-                source_path = source_path[4:]
+            # if sys.platform == 'win32':
+            #     source_path = source_path.replace('/', '\\')
+            # if source_path.startswith('\\\\?\\'):
+            #     source_path = source_path[4:]
             self.write_lead_text(f'{self.artifact_name} located at: {source_path}')
 
         self.report_file.write('<br />')

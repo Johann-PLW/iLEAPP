@@ -2,7 +2,6 @@ import json
 import argparse
 import io
 import pytz
-import os.path
 import typing
 import scripts.report as report
 import traceback
@@ -25,20 +24,25 @@ def validate_args(args):
     for arg in mandatory_args:
         value = getattr(args, arg)
         if value is None:
-            raise argparse.ArgumentError(None, f'No {arg.upper()} provided. Run the program again.')
+            raise argparse.ArgumentError(
+                None, f'No {arg.upper()} provided. Run the program again.')
 
     # Check existence of paths
-    if not os.path.exists(args.input_path):
-        raise argparse.ArgumentError(None, 'INPUT file/folder does not exist! Run the program again.')
+    if not Path(args.input_path).exists():
+        raise argparse.ArgumentError(
+            None, 'INPUT file/folder does not exist! Run the program again.')
 
-    if not os.path.exists(args.output_path):
-        raise argparse.ArgumentError(None, 'OUTPUT folder does not exist! Run the program again.')
+    if not Path(args.output_path).exists():
+        raise argparse.ArgumentError(
+            None, 'OUTPUT folder does not exist! Run the program again.')
 
-    if args.load_case_data and not os.path.exists(args.load_case_data):
-        raise argparse.ArgumentError(None, 'LEAPP Case Data file not found! Run the program again.')
+    if args.load_case_data and not Path(args.load_case_data).exists():
+        raise argparse.ArgumentError(
+            None, 'LEAPP Case Data file not found! Run the program again.')
 
-    if args.load_profile and not os.path.exists(args.load_profile):
-        raise argparse.ArgumentError(None, 'iLEAPP Profile file not found! Run the program again.')
+    if args.load_profile and not Path(args.load_profile).exists():
+        raise argparse.ArgumentError(
+            None, 'iLEAPP Profile file not found! Run the program again.')
 
     try:
         timezone = pytz.timezone(args.timezone)
@@ -62,13 +66,13 @@ def create_profile(plugins, path):
         print(instructions)
         user_choice = input('Please enter your choice: ').lower()
         print()
-        if user_choice == "l":
+        if user_choice == 'l':
             print('Available modules:')
             for number, available_module in enumerate(available_modules):
                 print(number + 1, available_module)
             print()
             user_choice = ''
-        elif user_choice == "p":
+        elif user_choice == 'p':
             if modules_in_profile:
                 for number, module in modules_in_profile.items():
                     print(number, module)
@@ -77,7 +81,8 @@ def create_profile(plugins, path):
                 print('No module added to the profile file\n')
             user_choice = ''
         elif user_choice == 'a':
-            modules_numbers = input('Enter the numbers of modules, seperated by a comma, to add or remove in the profile file: ')
+            modules_numbers = input('Enter the numbers of modules, seperated by a comma, \
+                                    to add or remove in the profile file: ')
             modules_numbers = modules_numbers.split(',')
             modules_numbers = [module_number.strip() for module_number in modules_numbers]
             for module_number in modules_numbers:
@@ -96,16 +101,18 @@ def create_profile(plugins, path):
                         print('Please enter the number of a module!!!\n')
             print()
             user_choice = ''
-        elif user_choice == "q":
+        elif user_choice == 'q':
             if modules_in_profile:
                 modules = [module_info[1] for module_info in modules_in_profile.values()]
                 profile_filename = ''
                 while not profile_filename:
                     profile_filename = input('Enter the name of the profile: ')
                 profile_filename += '.ilprofile'
-                filename = os.path.join(path, profile_filename)
-                with open(filename, "wt", encoding="utf-8") as profile_file:
-                    json.dump({"leapp": "ileapp", "format_version": 1, "plugins": modules}, profile_file)
+                filename = Path(path).joinpath(profile_filename)
+                with open(filename, 'wt', encoding='utf-8') as profile_file:
+                    json.dump(
+                        {'leapp': 'ileapp', 'format_version': 1, 'plugins': modules},
+                        profile_file)
                 print('\nProfile saved:', filename)
                 print()
             else:
@@ -120,43 +127,52 @@ def create_casedata(path):
     case_data_values = {}
     print('--- LEAPP Case Data file creation ---\n')
     print('Enter the following information:')
-    case_data_values['Case Number'] = input("Case Number: ")
-    case_data_values['Agency'] = input("Agency: ")
-    case_data_values['Examiner'] = input("Examiner : ")
+    case_data_values['Case Number'] = input('Case Number: ')
+    case_data_values['Agency'] = input('Agency: ')
+    case_data_values['Examiner'] = input('Examiner : ')
     print()
     case_data_filename = ''
     while not case_data_filename:
         case_data_filename = input('Enter the name of the Case Data file: ')
     case_data_filename += '.lcasedata'
-    filename = os.path.join(path, case_data_filename)
-    with open(filename, "wt", encoding="utf-8") as case_data_file:
-        json.dump({"leapp": "case_data", "case_data_values": case_data_values}, case_data_file)
+    filename = Path(path).joinpath(case_data_filename)
+    with open(filename, 'wt', encoding='utf-8') as case_data_file:
+        json.dump({'leapp': 'case_data', 'case_data_values': case_data_values}, case_data_file)
     print('\nCase Data file saved:', filename)
     print()
     return
 
 def main():
     parser = argparse.ArgumentParser(description='iLEAPP: iOS Logs, Events, And Plists Parser.')
-    parser.add_argument('-t', choices=['fs', 'tar', 'zip', 'gz', 'itunes'], required=False, action="store",
-                        help=("Specify the input type. "
-                              "'fs' for a folder containing extracted files with normal paths and names, "
-                              "'tar', 'zip', or 'gz' for compressed packages containing files with normal names, "
-                              "'itunes' for a folder containing a raw iTunes backup with hashed paths and names."))
-    parser.add_argument('-o', '--output_path', required=False, action="store",
+    parser.add_argument(
+        '-t', choices=['fs', 'tar', 'zip', 'gz', 'itunes'], 
+        required=False, action='store', help=('Specify the input type. '
+            "'fs' for a folder containing extracted files with normal paths and names, "
+            "'tar', 'zip', or 'gz' for compressed packages containing files with normal names, "
+            "'itunes' for a folder containing a raw iTunes backup with hashed paths and names."))
+    parser.add_argument('-o', '--output_path', required=False, action='store',
                         help='Path to base output folder (this must exist)')
-    parser.add_argument('-i', '--input_path', required=False, action="store", help='Path to input file/folder')
-    parser.add_argument('-tz', '--timezone', required=False, action="store", default='UTC', type=str, help="Timezone name (e.g., 'America/New_York')")
-    parser.add_argument('-w', '--wrap_text', required=False, action="store_false", default=True,
+    parser.add_argument('-i', '--input_path', required=False, action='store', 
+                        help='Path to input file/folder')
+    parser.add_argument('-tz', '--timezone', required=False, action='store', 
+                        default='UTC', type=str, help="Timezone name (e.g., 'America/New_York')")
+    parser.add_argument('-w', '--wrap_text', required=False, action='store_false', default=True,
                         help='Do not wrap text for output of data files')
-    parser.add_argument('-m', '--load_profile', required=False, action="store", help="Path to iLEAPP Profile file (.ilprofile).")
-    parser.add_argument('-d', '--load_case_data', required=False, action="store", help="Path to LEAPP Case Data file (.lcasedata).")
-    parser.add_argument('-c', '--create_profile_casedata', required=False, action="store",
-                        help=("Generate an iLEAPP Profile file (.ilprofile) or LEAPP Case Data file (.lcasedata) into the specified path. "
-                              "This argument is meant to be used alone, without any other arguments."))
-    parser.add_argument('-p', '--artifact_paths', required=False, action="store_true",
-                        help=("Generate a text file list of artifact paths. "
-                              "This argument is meant to be used alone, without any other arguments."))
-    parser.add_argument('--custom_output_folder', required=False, action="store", help="Custom name for the output folder")
+    parser.add_argument('-m', '--load_profile', required=False, action='store', 
+                        help='Path to iLEAPP Profile file (.ilprofile).')
+    parser.add_argument('-d', '--load_case_data', required=False, action='store', 
+                        help='Path to LEAPP Case Data file (.lcasedata).')
+    parser.add_argument(
+        '-c', '--create_profile_casedata', required=False, action='store', 
+        help=('Generate an iLEAPP Profile file (.ilprofile) or \
+              LEAPP Case Data file (.lcasedata) into the specified path. '
+              'This argument is meant to be used alone, without any other arguments.'))
+    parser.add_argument('-p', '--artifact_paths', required=False, action='store_true',
+                        help=('Generate a text file list of artifact paths. '
+                              'This argument is meant to be used alone, \
+                                without any other arguments.'))
+    parser.add_argument('--custom_output_folder', required=False, action='store', 
+                        help='Custom name for the output folder')
 
     loader = plugin_loader.PluginLoader()
     available_plugins = list(loader.plugins)
@@ -200,7 +216,7 @@ def main():
                     for x in plugin.search:
                         paths.write(x + '\n')
                         print(x)
-                else:  # TODO check that this is actually a string?
+                else:
                     paths.write(plugin.search + '\n')
                     print(plugin.search)
         print('')
@@ -208,7 +224,7 @@ def main():
         return
 
     if args.create_profile_casedata:
-        if os.path.isdir(args.create_profile_casedata):
+        if Path(args.create_profile_casedata).is_dir():
             create_choice = ''
             print('-' * 55)
             print('Welcome to iLEAPP Profile or Case Data file creation\n')
@@ -232,71 +248,75 @@ def main():
                     print('Please enter a valid choice!!!\n')
                     create_choice = ''
         else:
-            print('OUTPUT folder for storing iLEAPP Profile file does not exist!\nRun the program again.')
+            print('OUTPUT folder for storing iLEAPP Profile file does not exist!', 
+                  '\nRun the program again.')
             return
 
     if args.load_case_data:
         case_data_filename = args.load_case_data
         case_data_load_error = None
-        with open(case_data_filename, "rt", encoding="utf-8") as case_data_file:
+        with open(case_data_filename, 'rt', encoding='utf-8') as case_data_file:
             try:
                 case_data = json.load(case_data_file)
             except:
-                case_data_load_error = "File was not a valid case data file: invalid format"
+                case_data_load_error = 'File was not a valid case data file: invalid format'
                 print(case_data_load_error)
                 return
 
         if not case_data_load_error:
             if isinstance(case_data, dict):
-                if case_data.get("leapp") != "case_data":
-                    case_data_load_error = "File was not a valid case data file"
+                if case_data.get('leapp') != 'case_data':
+                    case_data_load_error = 'File was not a valid case data file'
                     print(case_data_load_error)
                     return
                 else:
                     print(f'Case Data loaded: {case_data_filename}')
                     casedata = case_data.get('case_data_values', {})
             else:
-                case_data_load_error = "File was not a valid case data file: invalid format"
+                case_data_load_error = 'File was not a valid case data file: invalid format'
                 print(case_data_load_error)
                 return
     
     if args.load_profile:
         profile_filename = args.load_profile
         profile_load_error = None
-        with open(profile_filename, "rt", encoding="utf-8") as profile_file:
+        with open(profile_filename, 'rt', encoding='utf-8') as profile_file:
             try:
                 profile = json.load(profile_file)
             except:
-                profile_load_error = "File was not a valid case data file: invalid format"
+                profile_load_error = 'File was not a valid case data file: invalid format'
                 print(profile_load_error)
                 return
 
         if not profile_load_error:
             if isinstance(profile, dict):
-                if profile.get("leapp") != "ileapp" or profile.get("format_version") != 1:
-                    profile_load_error = "File was not a valid profile file: incorrect LEAPP or version"
+                if profile.get('leapp') != 'ileapp' or profile.get('format_version') != 1:
+                    profile_load_error = 'File was not a valid profile file: \
+                        incorrect LEAPP or version'
                     print(profile_load_error)
                     return
                 else:
-                    profile_plugins = set(profile.get("plugins", []))
+                    profile_plugins = set(profile.get('plugins', []))
                     selected_plugins = [selected_plugin for selected_plugin in plugins 
                                         if selected_plugin.name in profile_plugins]
             else:
-                profile_load_error = "File was not a valid profile file: invalid format"
+                profile_load_error = 'File was not a valid profile file: invalid format'
                 print(profile_load_error)
                 return
     
     input_path = args.input_path
     wrap_text = args.wrap_text
-    output_path = os.path.abspath(args.output_path)
+    output_path = Path(args.output_path).absolute()
     time_offset = args.timezone
     custom_output_folder = args.custom_output_folder
 
     # ios file system extractions contain paths > 260 char, which causes problems
     # This fixes the problem by prefixing \\?\ on each windows path.
-    if is_platform_windows():
-        if input_path[1] == ':' and extracttype =='fs': input_path = '\\\\?\\' + input_path.replace('/', '\\')
-        if output_path[1] == ':': output_path = '\\\\?\\' + output_path.replace('/', '\\')
+    # if is_platform_windows():
+    #     if input_path[1] == ':' and extracttype =='fs':
+    #         input_path = '\\\\?\\' + input_path.replace('/', '\\')
+    #     if output_path[1] == ':':
+    #         output_path = '\\\\?\\' + output_path.replace('/', '\\')
 
     out_params = OutputParameters(output_path, custom_output_folder)
 
@@ -304,19 +324,20 @@ def main():
     
     initialize_lava(input_path, out_params.report_folder_base, extracttype)
 
-    crunch_artifacts(selected_plugins, extracttype, input_path, out_params, wrap_text, loader, casedata, time_offset, profile_filename)
+    crunch_artifacts(selected_plugins, extracttype, input_path, out_params, wrap_text, loader, 
+                     casedata, time_offset, profile_filename)
 
     lava_finalize_output(out_params.report_folder_base)
 
 def crunch_artifacts(
-        plugins: typing.Sequence[plugin_loader.PluginSpec], extracttype, input_path, out_params, wrap_text,
-        loader: plugin_loader.PluginLoader, casedata, time_offset, profile_filename):
+        plugins: typing.Sequence[plugin_loader.PluginSpec], extracttype, input_path, out_params, 
+        wrap_text, loader: plugin_loader.PluginLoader, casedata, time_offset, profile_filename):
     start = process_time()
     start_wall = perf_counter()
  
     logfunc('Processing started. Please wait. This may take a few minutes...')
 
-    logfunc('\n--------------------------------------------------------------------------------------')
+    logfunc('\n--------------------------------------------------------------------------------')
     logfunc(f'iLEAPP v{ileapp_version}: iOS Logs, Events, And Plists Parser')
     logfunc('Objective: Triage iOS Full File System and iTunes Backup Extractions.')
     logfunc('By: Alexis Brignoni | @AlexisBrignoni | abrignoni.com')
@@ -352,39 +373,42 @@ def crunch_artifacts(
     logfunc(f'Info: {len(loader) - 2} modules loaded.') # excluding lastbuild and iTunesBackupInfo
     if profile_filename:
         logfunc(f'Loaded profile: {profile_filename}')
-    logfunc(f'Artifact categories to parse: {len(plugins) - 1}') # excluding lastbuild always executed first
+    artifact_to_parse = len(plugins) - 1 if extracttype != 'itunes' else len(plugins) 
+    logfunc(f'Artifact to parse: {artifact_to_parse}')
     logfunc(f'File/Directory selected: {input_path}')
-    logfunc('\n--------------------------------------------------------------------------------------')
+    logfunc('\n--------------------------------------------------------------------------------')
 
-    log = open(os.path.join(out_params.report_folder_base, 'Script Logs', 'ProcessedFilesLog.html'), 'w+', encoding='utf8')
+    log = open(
+        Path(out_params.report_folder_base).joinpath('Script Logs', 'ProcessedFilesLog.html'), 
+        'w+', encoding='utf8')
     log.write(f'Extraction/Path selected: {input_path}<br><br>')
     log.write(f'Timezone selected: {time_offset}<br><br>')
     
     parsed_modules = 0
-    # Special processing for iTunesBackup Info.plist as it is a seperate entity, not part of the Manifest.db. Seeker won't find it
+    # Special processing for iTunesBackup Info.plist as it is a seperate entity, 
+    # not part of the Manifest.db. Seeker won't find it
     if extracttype == 'itunes':
-        info_plist_path = os.path.join(input_path, 'Info.plist')
-        if os.path.exists(info_plist_path):
-            # process_artifact([info_plist_path], 'iTunesBackupInfo', 'Device Info', seeker, out_params.report_folder_base)
-            #plugin.method([info_plist_path], out_params.report_folder_base, seeker, wrap_text)
-            report_folder = os.path.join(out_params.report_folder_base, '_HTML', 'iTunes Backup')
-            if not os.path.exists(report_folder):
+        info_plist_path = Path(input_path).joinpath('Info.plist')
+        if Path(info_plist_path).exists():
+            report_folder = Path(out_params.report_folder_base).joinpath('_HTML', 'iTunes Backup')
+            if not Path(report_folder).exists():
                 try:
                     os.makedirs(report_folder)
                 except (FileExistsError, FileNotFoundError) as ex:
                     logfunc('Error creating report directory at path {}'.format(report_folder))
                     logfunc('Error was {}'.format(str(ex)))
-            loader["iTunesBackupInfo"].method([info_plist_path], report_folder, seeker, wrap_text, time_offset)
-            report_folder = os.path.join(out_params.report_folder_base, '_HTML', 'Installed Apps')
-            if not os.path.exists(report_folder):
+            loader['iTunesBackupInfo'].method(
+                [info_plist_path], report_folder, seeker, wrap_text, time_offset)
+            report_folder = Path(out_params.report_folder_base).joinpath('_HTML', 'Installed Apps')
+            if not Path(report_folder).exists():
                 try:
                     os.makedirs(report_folder)
                 except (FileExistsError, FileNotFoundError) as ex:
                     logfunc('Error creating report directory at path {}'.format(report_folder))
                     logfunc('Error was {}'.format(str(ex)))
-            loader["iTunesBackupInstalledApplications"].method([info_plist_path], report_folder, seeker, wrap_text, time_offset)
-            #del search_list['lastBuild'] # removing lastBuild as this takes its place
-            print([info_plist_path])  # TODO Remove special consideration for itunes? Merge into main search
+            loader['iTunesBackupInstalledApplications'].method(
+                [info_plist_path], report_folder, seeker, wrap_text, time_offset)
+            print([info_plist_path])
         else:
             logfunc('Info.plist not found for iTunes Backup!')
             log.write('Info.plist not found for iTunes Backup!')
@@ -404,9 +428,12 @@ def crunch_artifacts(
         for artifact_search_regex in search_regexes:
             found = seeker.search(artifact_search_regex)
             if not found:
-                log.write(f'<ul><li>No file found for regex <i>{artifact_search_regex}</i></li></ul>')
+                log.write(
+                    f'<ul><li>No file found for regex <i>{artifact_search_regex}</i></li></ul>')
             else:
-                log.write(f'<ul><li>{len(found)} {"files" if len(found) > 1 else "file"} for regex <i>{artifact_search_regex}</i> located at:')
+                files = 'files' if len(found) > 1 else 'file'
+                log.write(f'<ul><li>{len(found)} {files} for regex \
+                          <i>{artifact_search_regex}</i> located at:')
                 for pathh in found:
                     if pathh.startswith('\\\\?\\'):
                         pathh = pathh[4:]
@@ -414,23 +441,24 @@ def crunch_artifacts(
                 log.write(f'</li></ul>')
                 files_found.extend(found)
         if files_found:
-            category_folder = os.path.join(out_params.report_folder_base, '_HTML', plugin.category)
-            if not os.path.exists(category_folder):
+            category_folder = Path(out_params.report_folder_base).joinpath('_HTML', plugin.category)
+            if not Path(category_folder).exists():
                 try:
                     os.makedirs(category_folder)
                 except (FileExistsError, FileNotFoundError) as ex:
-                    logfunc('Error creating {} report directory at path {}'.format(plugin.name, category_folder))
+                    logfunc('Error creating {} report directory at path {}'.format(
+                        plugin.name, category_folder))
                     logfunc('Error was {}'.format(str(ex)))
                     continue  # cannot do work
             try:
-                artifact_data = plugin.method(files_found, category_folder, seeker, wrap_text, time_offset)
+                plugin.method(files_found, category_folder, seeker, wrap_text, time_offset)
             except Exception as ex:
                 logfunc('Reading {} artifact had errors!'.format(plugin.name))
                 logfunc('Error was {}'.format(str(ex)))
                 logfunc('Exception Traceback: {}'.format(traceback.format_exc()))
                 continue  # nope
         else:
-            logfunc(f"No file found")
+            logfunc(f'No file found')
         logfunc('{} [{}] artifact completed'.format(plugin.name, plugin.module_name))
     log.close()
 
@@ -441,21 +469,22 @@ def crunch_artifacts(
     end_wall = perf_counter()
     run_time_secs =  end - start
     run_time_HMS = strftime('%H:%M:%S', gmtime(run_time_secs))
-    logfunc("Processing time = {}".format(run_time_HMS))
+    logfunc('Processing time = {}'.format(run_time_HMS))
     run_time_secs =  end_wall - start_wall
     run_time_HMS = strftime('%H:%M:%S', gmtime(run_time_secs))
-    logfunc("Processing time (wall)= {}".format(run_time_HMS))
+    logfunc('Processing time (wall)= {}'.format(run_time_HMS))
 
     logfunc('')
     logfunc('Report generation started.')
     # remove the \\?\ prefix we added to input and output paths, so it does not reflect in report
-    if is_platform_windows(): 
-        if out_params.report_folder_base.startswith('\\\\?\\'):
-            out_params.report_folder_base = out_params.report_folder_base[4:]
-        if input_path.startswith('\\\\?\\'):
-            input_path = input_path[4:]
+    # if is_platform_windows(): 
+    #     if out_params.report_folder_base.startswith('\\\\?\\'):
+    #         out_params.report_folder_base = out_params.report_folder_base[4:]
+    #     if input_path.startswith('\\\\?\\'):
+    #         input_path = input_path[4:]
     
-    report.generate_report(out_params.report_folder_base, run_time_secs, run_time_HMS, extracttype, input_path, casedata, profile_filename, icons)
+    report.generate_report(out_params.report_folder_base, run_time_secs, run_time_HMS, 
+                           extracttype, input_path, casedata, profile_filename, icons)
     logfunc('Report generation Completed.')
     logfunc('')
     logfunc(f'Report location: {out_params.report_folder_base}')
