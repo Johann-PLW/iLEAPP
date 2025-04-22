@@ -1,18 +1,18 @@
 import tkinter as tk
+import sys
 import typing
 import json
 import ileapp
 import webbrowser
-
 import scripts.plugin_loader as plugin_loader
 
 from PIL import Image, ImageTk
 from tkinter import ttk, filedialog as tk_filedialog, messagebox as tk_msgbox
+from pathlib import Path
+from scripts.ilapfuncs import GuiWindow, OutputParameters
 from scripts.version_info import ileapp_version
-from scripts.search_files import *
-from scripts.tz_offset import tzvalues
 from scripts.modules_to_exclude import modules_to_exclude
-from scripts.lavafuncs import *
+from scripts.lavafuncs import initialize_lava, lava_finalize_output
 
 
 def pickModules():
@@ -29,8 +29,10 @@ def pickModules():
             continue
         # Items that take a long time to execute are deselected by default
         # and referenced in the modules_to_exclude list in an external file (modules_to_exclude.py).
-        plugin_enabled = tk.BooleanVar(value=False) if plugin.module_name in modules_to_exclude else tk.BooleanVar(value=True)
-        plugin_module_name = plugin.artifact_info.get('name', plugin.name) if hasattr(plugin, 'artifact_info') else plugin.name
+        plugin_enabled = tk.BooleanVar(value=False) \
+            if plugin.module_name in modules_to_exclude else tk.BooleanVar(value=True)
+        plugin_module_name = plugin.artifact_info.get('name', plugin.name) \
+            if hasattr(plugin, 'artifact_info') else plugin.name
         mlist[plugin.name] = [plugin.category, plugin_module_name, plugin.module_name, plugin_enabled]
 
 
@@ -69,7 +71,7 @@ def filter_modules(*args):
     mlist_text.delete('0.0', tk.END)
 
     for artifact_name, module_infos in mlist.items():
-        filter_modules_info = f"{module_infos[0]} {module_infos[1]}".lower()
+        filter_modules_info = f'{module_infos[0]} {module_infos[1]}'.lower()
         if filter_term in filter_modules_info:
             cb = tk.Checkbutton(mlist_text, name=f'mcb_{artifact_name}',
                                 text=f'{module_infos[0]} [{module_infos[1]} | {module_infos[2]}.py]',
@@ -88,7 +90,7 @@ def load_profile():
                                                      title='Load a profile',
                                                      filetypes=(('iLEAPP Profile', '*.ilprofile'),))
 
-    if destination_path and os.path.exists(destination_path):
+    if destination_path and Path(destination_path).exists():
         profile_load_error = None
         with open(destination_path, 'rt', encoding='utf-8') as profile_in:
             try:
@@ -120,7 +122,8 @@ def save_profile():
     '''Save selected modules in a profile file'''
     destination_path = tk_filedialog.asksaveasfilename(parent=main_window,
                                                        title='Save a profile',
-                                                       filetypes=(('iLEAPP Profile', '*.ilprofile'),))
+                                                       filetypes=(('iLEAPP Profile', '*.ilprofile'),),
+                                                       defaultextension='.ilprofile')
 
     if destination_path:
         selected_modules = get_selected_modules()
@@ -146,12 +149,13 @@ def ValidateInput():
     if len(i_path) == 0:
         tk_msgbox.showerror(title='Error', message='No INPUT file or folder selected!', parent=main_window)
         return False, ext_type
-    elif not os.path.exists(i_path):
+    elif not Path(i_path).exists():
         tk_msgbox.showerror(title='Error', message='INPUT file/folder does not exist!', parent=main_window)
         return False, ext_type
-    elif os.path.isdir(i_path) and (os.path.exists(os.path.join(i_path, 'Manifest.db')) or os.path.exists(os.path.join(i_path, 'Manifest.mbdb'))):
+    elif Path(i_path).is_dir() and \
+        (Path(i_path).joinpath('Manifest.db').exists() or Path(i_path).joinpath('Manifest.mbdb').exists()):
         ext_type = 'itunes'
-    elif os.path.isdir(i_path):
+    elif Path(i_path).is_dir():
         ext_type = 'fs'
     else:
         ext_type = Path(i_path).suffix[1:].lower()
@@ -181,11 +185,11 @@ def open_website(url):
 
 def resource_path(filename):
     try:
-        base_path = sys._MEIPASS
+        base_path = Path(sys._MEIPASS)
     except Exception:
-        base_path = os.path.abspath(".")
+        base_path = Path.absolute(Path('.'))
 
-    return os.path.join(base_path, 'assets', filename)
+    return base_path.joinpath('assets', filename)
 
 def process(casedata):
     '''Execute selected modules and create reports'''
@@ -199,9 +203,9 @@ def process(casedata):
 
         # ios file system extractions contain paths > 260 char, which causes problems
         # This fixes the problem by prefixing \\?\ on each windows path.
-        if is_platform_windows():
-            if input_path[1] == ':' and extracttype == 'fs': input_path = '\\\\?\\' + input_path.replace('/', '\\')
-            if output_folder[1] == ':': output_folder = '\\\\?\\' + output_folder.replace('/', '\\')
+        # if sys.platform == 'win32':
+        #     if input_path[1] == ':' and extracttype == 'fs': input_path = '\\\\?\\' + input_path.replace('/', '\\')
+        #     if output_folder[1] == ':': output_folder = '\\\\?\\' + output_folder.replace('/', '\\')
 
         # re-create modules list based on user selection
         selected_modules = get_selected_modules()
@@ -229,18 +233,19 @@ def process(casedata):
         lava_finalize_output(out_params.report_folder_base)
 
         if crunch_successful:
-            report_path = os.path.join(out_params.report_folder_base, 'index.html')
-            if report_path.startswith('\\\\?\\'):  # windows
-                report_path = report_path[4:]
-            if report_path.startswith('\\\\'):  # UNC path
-                report_path = report_path[2:]
+            report_path = Path(out_params.report_folder_base).joinpath('index.html')
+            # if report_path.startswith('\\\\?\\'):  # windows
+            #     report_path = report_path[4:]
+            # if report_path.startswith('\\\\'):  # UNC path
+            #     report_path = report_path[2:]
             progress_bar.grid_remove()
-            open_report_button = ttk.Button(main_window, text='Open Report & Close', command=lambda: open_report(report_path))
+            open_report_button = ttk.Button(
+                main_window, text='Open Report & Close', command=lambda: open_report(str(report_path)))
             open_report_button.grid(ipadx=8)
         else:
-            log_path = out_params.screen_output_file_path
-            if log_path.startswith('\\\\?\\'):  # windows
-                log_path = log_path[4:]
+            log_path = Path(out_params.screen_output_file_path)
+            # if log_path.startswith('\\\\?\\'):  # windows
+            #     log_path = log_path[4:]
             tk_msgbox.showerror(
                 title='Error',
                 message=f'Processing failed  :( \nSee log for error details..\nLog file located at {log_path}',
@@ -284,7 +289,8 @@ def case_data():
         '''Save case data in a Case Data file'''
         destination_path = tk_filedialog.asksaveasfilename(parent=case_window,
                                                            title='Save a case data file',
-                                                           filetypes=(('LEAPP Case Data', '*.lcasedata'),))
+                                                           filetypes=(('LEAPP Case Data', '*.lcasedata'),),
+                                                           defaultextension='.lcasedata')
 
         if destination_path:
             json_casedata = {key: value.get() for key, value in casedata.items()}
@@ -299,7 +305,7 @@ def case_data():
                                                          title='Load case data',
                                                          filetypes=(('LEAPP Case Data', '*.lcasedata'),))
 
-        if destination_path and os.path.exists(destination_path):
+        if destination_path and Path(destination_path).exists():
             case_data_load_error = None
             with open(destination_path, 'rt', encoding='utf-8') as case_data_in:
                 try:
@@ -329,7 +335,7 @@ def case_data():
     ### Case Data Window creation
     case_window = tk.Toplevel(main_window)
     case_window_width = 560
-    if is_platform_linux():
+    if sys.platform == 'linux':
         case_window_height = 290
     else:
         case_window_height = 270
@@ -396,7 +402,7 @@ casedata = {'Case Number': tk.StringVar(),
             }
 timezone_set = tk.StringVar()
 modules_filter_var = tk.StringVar()
-modules_filter_var.trace_add("write", filter_modules)  # Trigger filtering on input change
+modules_filter_var.trace_add('write', filter_modules)  # Trigger filtering on input change
 pickModules()
 
 ## Theme properties
@@ -404,10 +410,10 @@ theme_bgcolor = '#2c2825'
 theme_inputcolor = '#705e52'
 theme_fgcolor = '#fdcb52'
 
-if is_platform_macos():
+if sys.platform == 'darwin':
     mlist_window_height = 24
     log_text_height = 36
-elif is_platform_linux():
+elif sys.platform == 'linux':
     mlist_window_height = 17
     log_text_height = 28
 else:
@@ -454,13 +460,13 @@ style.configure('TProgressbar', thickness=4, background='DarkGreen')
 title_frame = ttk.Frame(main_window)
 title_frame.grid(padx=14, pady=8, sticky='we')
 title_frame.grid_columnconfigure(0, weight=1)
-ileapp_logo = ImageTk.PhotoImage(file=resource_path("iLEAPP_logo.png"))
+ileapp_logo = ImageTk.PhotoImage(file=resource_path('iLEAPP_logo.png'))
 ileapp_logo_label = ttk.Label(title_frame, image=ileapp_logo)
 ileapp_logo_label.grid(row=0, column=0, sticky='w')
-leapps_logo = ImageTk.PhotoImage(Image.open(resource_path("leapps_i_logo.png")).resize((110, 51)))
-leapps_logo_label = ttk.Label(title_frame, image=leapps_logo, cursor="target")
+leapps_logo = ImageTk.PhotoImage(Image.open(resource_path('leapps_i_logo.png')).resize((110, 51)))
+leapps_logo_label = ttk.Label(title_frame, image=leapps_logo, cursor='target')
 leapps_logo_label.grid(row=0, column=1, sticky='w')
-leapps_logo_label.bind("<Button-1>", lambda e: open_website("https://leapps.org"))
+leapps_logo_label.bind('<Button-1>', lambda e: open_website('https://leapps.org'))
 
 ### Input output selection
 input_frame = ttk.LabelFrame(
@@ -491,11 +497,11 @@ button_frame = ttk.Frame(mlist_frame)
 button_frame.grid(row=0, column=0, columnspan=2,pady=4, sticky='we')
 button_frame.grid_columnconfigure(1, weight=1)
 
-if is_platform_macos():
-    modules_filter_icon = ttk.Label(button_frame, text="\U0001F50E")
+if sys.platform == 'darwin':
+    modules_filter_icon = ttk.Label(button_frame, text='\U0001F50E')
     modules_filter_icon.grid(row=0, column=0, padx=4)
 else:
-    modules_filter_img = ImageTk.PhotoImage(file=resource_path("magnif_glass.png"))
+    modules_filter_img = ImageTk.PhotoImage(file=resource_path('magnif_glass.png'))
     modules_filter_icon = ttk.Label(button_frame, image=modules_filter_img)
     modules_filter_icon.grid(row=0, column=0, padx=4)
 modules_filter_entry = ttk.Entry(button_frame, textvariable=modules_filter_var)
@@ -521,9 +527,9 @@ mlist_text.config(state='disabled')
 main_window.bind_class('Checkbutton', '<MouseWheel>', scroll)
 main_window.bind_class('Checkbutton', '<Button-4>', scroll)
 main_window.bind_class('Checkbutton', '<Button-5>', scroll)
-main_window.bind("<Control-f>", lambda event: modules_filter_entry.focus_set()) # Focus on The Filter Field
-main_window.bind("<Control-i>", lambda event: input_entry.focus_set()) # Focus on the Input Field
-main_window.bind("<Control-o>", lambda event: output_entry.focus_set()) # Focus on the Output Field
+main_window.bind('<Control-f>', lambda event: modules_filter_entry.focus_set()) # Focus on The Filter Field
+main_window.bind('<Control-i>', lambda event: input_entry.focus_set()) # Focus on the Input Field
+main_window.bind('<Control-o>', lambda event: output_entry.focus_set()) # Focus on the Output Field
 
 ### Process
 bottom_frame = ttk.Frame(main_window)
@@ -541,7 +547,7 @@ ttk.Separator(bottom_frame, orient='vertical').grid(row=0, column=4, rowspan=2, 
 selected_modules_label = ttk.Label(bottom_frame, text='Number of selected modules: ')
 selected_modules_label.grid(row=0, column=5, padx=5, sticky='e')
 auto_unselected_modules_text = '(Modules making some time to run were automatically unselected)'
-if is_platform_macos():
+if sys.platform == 'darwin':
     auto_unselected_modules_label = ttk.Label(
         bottom_frame,
         text=auto_unselected_modules_text,

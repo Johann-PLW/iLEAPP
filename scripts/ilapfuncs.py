@@ -381,14 +381,6 @@ def artifact_processor(func):
     return wrapper
 
 
-def is_platform_linux():
-    '''Returns True if running on Linux'''
-    return sys.platform == 'linux'
-
-def is_platform_macos():
-    '''Returns True if running on macOS'''
-    return sys.platform == 'darwin'
-
 def is_platform_windows():
     '''Returns True if running on Windows'''
     return sys.platform == 'win32'
