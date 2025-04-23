@@ -1,18 +1,16 @@
 import html
-import os
-import sys
+from pathlib import Path
 from scripts.html_parts import *
-#from scripts.ilapfuncs import is_platform_windows
 from scripts.version_info import ileapp_version
+from scripts.ilapfuncs import cleaned_path
 
 class ArtifactHtmlReport:
 
-    def __init__(self, artifact_name, artifact_category=''):
+    def __init__(self, artifact_name):
         self.report_file = None
         self.report_file_path = ''
         self.script_code = ''
         self.artifact_name = artifact_name
-        self.artifact_category = artifact_category # unused
 
     def __del__(self):
         if self.report_file:
@@ -20,8 +18,7 @@ class ArtifactHtmlReport:
 
     def start_artifact_report(self, report_folder, artifact_file_name, artifact_description=''):
         '''Creates the report HTML file and writes the artifact name as a heading'''
-        # artifact_file_name =  artifact_file_name.replace(" ", "_") # Replace " " with "_" in HTML filenames
-        self.report_file = open(os.path.join(report_folder, f'{artifact_file_name}.temphtml'), 'w', encoding='utf8')
+        self.report_file = open(Path(report_folder).joinpath(f'{artifact_file_name}.temphtml'), 'w', encoding='utf8')
         self.report_file.write(page_header.format(f'iLEAPP - {self.artifact_name} report'))
         self.report_file.write(body_start.format(f'iLEAPP {ileapp_version}'))
         self.report_file.write(body_sidebar_setup)
@@ -85,16 +82,12 @@ class ArtifactHtmlReport:
         if write_total:
             self.write_minor_header(f'Total number of entries: {num_entries}', 'h6')
         if write_location:
-            # if sys.platform == 'win32':
-            #     source_path = source_path.replace('/', '\\')
-            # if source_path.startswith('\\\\?\\'):
-            #     source_path = source_path[4:]
-            self.write_lead_text(f'{self.artifact_name} located at: {source_path}')
+            self.write_lead_text(f'{self.artifact_name} located at: {cleaned_path(source_path)}')
 
         self.report_file.write('<br />')
 
         if table_responsive:
-            self.report_file.write("<div class='table-responsive'>")
+            self.report_file.write('<div class="table-responsive">')
 
         table_head = '<table id="{}" class="table table-striped table-bordered table-xsm" cellspacing="0" {}>' \
                      '<thead>'.format(table_id, (f'style="{table_style}"') if table_style else '')
@@ -115,7 +108,8 @@ class ArtifactHtmlReport:
                          row)) + '</tr>')
         else:
             for row in data_list:
-                self.report_file.write('<tr>' + ''.join( ('<td>{}</td>'.format(str(x) if x not in [None, 'N/A'] else '') for x in row) ) + '</tr>')
+                self.report_file.write('<tr>' + ''.join( ('<td>{}</td>'.format(
+                    str(x) if x not in [None, 'N/A'] else '') for x in row) ) + '</tr>')
         
         self.report_file.write('</tbody>')
         if cols_repeated_at_bottom:
@@ -123,11 +117,12 @@ class ArtifactHtmlReport:
                 ('<th>{}</th>'.format(html.escape(str(x))) for x in data_headers)) + '</tr></tfoot>')
         self.report_file.write('</table>')
         if table_responsive:
-            self.report_file.write("</div>")
+            self.report_file.write('</div>')
 
     def add_section_heading(self, heading, size='h2'):
         heading = html.escape(heading)
-        data = '<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">' \
+        data = '<div class=\
+            "d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">' \
                '    <{0} class="{0}">{1}</{0}>' \
                '</div>'
         self.report_file.write(data.format(size, heading))
@@ -151,4 +146,3 @@ class ArtifactHtmlReport:
             self.report_file.close()
             self.report_file = None
 
-        
