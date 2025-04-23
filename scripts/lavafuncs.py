@@ -1,9 +1,11 @@
 import json
 import sqlite3
 import os
-from collections import OrderedDict
 import re
 import datetime
+from collections import OrderedDict
+from pathlib import Path
+from scripts.ilapfuncs import cleaned_path
 
 # Global variables
 lava_data = None
@@ -29,15 +31,15 @@ def initialize_lava(input_path, output_path, input_type):
     global lava_data, lava_db
     
     lava_data = {
-        "param_input": input_path,
-        "param_output": output_path,
+        "param_input": cleaned_path(input_path),
+        "param_output": cleaned_path(output_path),
         "param_type": input_type,
         "processing_status": "In Progress",
         "modules": [],
         "artifacts": OrderedDict()
     }
     
-    db_path = os.path.join(output_path, '_lava_artifacts.db')
+    db_path = Path(output_path).joinpath('_lava_artifacts.db')
     lava_db = sqlite3.connect(db_path)
     
     cursor = lava_db.cursor()
@@ -276,7 +278,7 @@ def lava_finalize_output(output_path):
         lava_data["artifacts"][category].sort(key=lambda x: x["name"])
     
     # Save LAVA JSON output
-    with open(os.path.join(output_path, '_lava_data.json'), 'w') as f:
+    with open(Path(output_path).joinpath('_lava_data.json'), 'w') as f:
         json.dump(lava_data, f, indent=4)
     
     # Close the SQLite database

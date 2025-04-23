@@ -66,20 +66,20 @@ class OutputParameters:
 
     def __init__(self, output_folder, custom_folder_name=None):
         now = datetime.now()
-        currenttime = str(now.strftime('%Y-%m-%d_%A_%H%M%S'))
+        currenttime = str(now.strftime('%Y-%m-%d_%H%M%S'))
         if custom_folder_name:
             folder_name = custom_folder_name
         else:
             folder_name = 'iLEAPP_Reports_' + currenttime
-        self.report_folder_base = os.path.join(output_folder, folder_name)
-        self.data_folder = os.path.join(self.report_folder_base, 'data')
-        OutputParameters.screen_output_file_path = os.path.join(
-            self.report_folder_base, 'Script Logs', 'Screen Output.html')
-        OutputParameters.screen_output_file_path_devinfo = os.path.join(
-            self.report_folder_base, 'Script Logs', 'DeviceInfo.html')
+        self.report_folder_base = Path(output_folder).joinpath(folder_name)
+        self.data_folder = Path(self.report_folder_base).joinpath('data')
+        OutputParameters.screen_output_file_path = \
+            Path(self.report_folder_base).joinpath('Script Logs', 'Screen Output.html')
+        OutputParameters.screen_output_file_path_devinfo = \
+            Path(self.report_folder_base).joinpath('Script Logs', 'DeviceInfo.html')
 
-        os.makedirs(os.path.join(self.report_folder_base, 'Script Logs'))
-        os.makedirs(self.data_folder)
+        Path.mkdir(Path(self.report_folder_base).joinpath('Script Logs'), parents=True)
+        Path.mkdir(self.data_folder, parents=True)
         
 class GuiWindow:
     '''This only exists to hold window handle if script is run from GUI'''
@@ -125,6 +125,20 @@ class MediaReferences():
         self.artifact_name = media_ref_info[3]
         self.name = media_ref_info[4]
 
+
+def windows_long_path(path):
+    """Converts a Windows path to a long path"""
+    # Each windows path will be prefixed with '\\?\'
+    if path[1] == ':':
+        return '\\\\?\\' + path
+        
+
+def cleaned_path(path):
+    """Removes prefix added to Windows long paths"""
+    # remove the \\?\ prefix so it does not reflect in report
+    path = str(path)
+    return path[4:] if path.startswith('\\\\?\\') else path
+        
 
 def logfunc(message=""):
     def redirect_logs(string):
