@@ -24,32 +24,26 @@ def validate_args(args):
     for arg in mandatory_args:
         value = getattr(args, arg)
         if value is None:
-            raise argparse.ArgumentError(
-                None, f'No {arg.upper()} provided. Run the program again.')
+            raise argparse.ArgumentError(None, f'No {arg.upper()} provided. Run the program again.')
 
     # Check existence of paths
     if not Path(args.input_path).exists():
-        raise argparse.ArgumentError(
-            None, 'INPUT file/folder does not exist! Run the program again.')
+        raise argparse.ArgumentError(None, 'INPUT file/folder does not exist! Run the program again.')
 
     if not Path(args.output_path).exists():
-        raise argparse.ArgumentError(
-            None, 'OUTPUT folder does not exist! Run the program again.')
+        raise argparse.ArgumentError(None, 'OUTPUT folder does not exist! Run the program again.')
 
     if args.load_case_data and not Path(args.load_case_data).exists():
-        raise argparse.ArgumentError(
-            None, 'LEAPP Case Data file not found! Run the program again.')
+        raise argparse.ArgumentError(None, 'LEAPP Case Data file not found! Run the program again.')
 
     if args.load_profile and not Path(args.load_profile).exists():
-        raise argparse.ArgumentError(
-            None, 'iLEAPP Profile file not found! Run the program again.')
+        raise argparse.ArgumentError(None, 'iLEAPP Profile file not found! Run the program again.')
 
     try:
         timezone = pytz.timezone(args.timezone)
     except pytz.UnknownTimeZoneError:
       raise argparse.ArgumentError(None, 'Unknown timezone! Run the program again.')
         
-
 def create_profile(plugins, path):
     available_modules = [(module_data.category, module_data.name) for module_data in plugins]
     available_modules.sort()
@@ -165,12 +159,11 @@ def main():
     parser.add_argument(
         '-c', '--create_profile_casedata', required=False, action='store', 
         help=('Generate an iLEAPP Profile file (.ilprofile) or \
-              LEAPP Case Data file (.lcasedata) into the specified path. '
+              LEAPP Case Data file (.lcasedata) into the specified path.'
               'This argument is meant to be used alone, without any other arguments.'))
     parser.add_argument('-p', '--artifact_paths', required=False, action='store_true',
                         help=('Generate a text file list of artifact paths. '
-                              'This argument is meant to be used alone, \
-                                without any other arguments.'))
+                              'This argument is meant to be used alone, without any other arguments.'))
     parser.add_argument('--custom_output_folder', required=False, action='store', 
                         help='Custom name for the output folder')
 
@@ -248,51 +241,50 @@ def main():
                     print('Please enter a valid choice!!!\n')
                     create_choice = ''
         else:
-            print('OUTPUT folder for storing iLEAPP Profile file does not exist!', 
-                  '\nRun the program again.')
+            print('OUTPUT folder for storing iLEAPP Profile file does not exist! \nRun the program again.')
             return
 
     if args.load_case_data:
-        case_data_filename = args.load_case_data
+        case_data_filename = Path(args.load_case_data)
         case_data_load_error = None
         with open(case_data_filename, 'rt', encoding='utf-8') as case_data_file:
             try:
                 case_data = json.load(case_data_file)
             except:
-                case_data_load_error = 'File was not a valid case data file: invalid format'
+                case_data_load_error = f'{case_data_filename.name} is not a valid case data file: invalid format'
                 print(case_data_load_error)
                 return
 
         if not case_data_load_error:
             if isinstance(case_data, dict):
                 if case_data.get('leapp') != 'case_data':
-                    case_data_load_error = 'File was not a valid case data file'
+                    case_data_load_error = f'{case_data_filename.name} is not a valid case data file'
                     print(case_data_load_error)
                     return
                 else:
                     print(f'Case Data loaded: {case_data_filename}')
                     casedata = case_data.get('case_data_values', {})
             else:
-                case_data_load_error = 'File was not a valid case data file: invalid format'
+                case_data_load_error = f'{case_data_filename.name} is not a valid case data file: invalid format'
                 print(case_data_load_error)
                 return
     
     if args.load_profile:
-        profile_filename = args.load_profile
+        profile_filename = Path(args.load_profile)
         profile_load_error = None
         with open(profile_filename, 'rt', encoding='utf-8') as profile_file:
             try:
                 profile = json.load(profile_file)
             except:
-                profile_load_error = 'File was not a valid case data file: invalid format'
+                profile_load_error = f'{profile_filename.name} is not a valid profile file: invalid format'
                 print(profile_load_error)
                 return
 
         if not profile_load_error:
             if isinstance(profile, dict):
                 if profile.get('leapp') != 'ileapp' or profile.get('format_version') != 1:
-                    profile_load_error = 'File was not a valid profile file: \
-                        incorrect LEAPP or version'
+                    profile_load_error = f'{profile_filename.name} is not a valid profile file:\
+                          incorrect LEAPP or version'
                     print(profile_load_error)
                     return
                 else:
@@ -300,23 +292,27 @@ def main():
                     selected_plugins = [selected_plugin for selected_plugin in plugins 
                                         if selected_plugin.name in profile_plugins]
             else:
-                profile_load_error = 'File was not a valid profile file: invalid format'
+                profile_load_error = f'{profile_filename.name} is not a valid profile file: invalid format'
                 print(profile_load_error)
                 return
     
     input_path = args.input_path
     wrap_text = args.wrap_text
-    output_path = Path(args.output_path).absolute()
+    output_path = args.output_path
     time_offset = args.timezone
     custom_output_folder = args.custom_output_folder
 
     # ios file system extractions contain paths > 260 char, which causes problems
-    # This fixes the problem by prefixing \\?\ on each windows path.
-    # if is_platform_windows():
-    #     if input_path[1] == ':' and extracttype =='fs':
-    #         input_path = '\\\\?\\' + input_path.replace('/', '\\')
-    #     if output_path[1] == ':':
-    #         output_path = '\\\\?\\' + output_path.replace('/', '\\')
+    if sys.platform == 'win32':
+        if extracttype =='fs':
+            input_path = windows_long_paths(input_path)
+        output_path = windows_long_paths(output_path)
+        if custom_output_folder:
+            custom_output_folder = windows_long_paths(custom_output_folder)
+
+    input_path = Path(input_path)
+    output_path = Path(output_path)
+    custom_output_folder = Path(custom_output_folder) if custom_output_folder else None
 
     out_params = OutputParameters(output_path, custom_output_folder)
 
@@ -375,13 +371,12 @@ def crunch_artifacts(
         logfunc(f'Loaded profile: {profile_filename}')
     artifact_to_parse = len(plugins) - 1 if extracttype != 'itunes' else len(plugins) 
     logfunc(f'Artifact to parse: {artifact_to_parse}')
-    logfunc(f'File/Directory selected: {input_path}')
+    logfunc(f'File/Directory selected: {cleaned_path(input_path)}')
     logfunc('\n--------------------------------------------------------------------------------')
 
     log = open(
-        Path(out_params.report_folder_base).joinpath('Script Logs', 'ProcessedFilesLog.html'), 
-        'w+', encoding='utf8')
-    log.write(f'Extraction/Path selected: {input_path}<br><br>')
+        Path(out_params.report_folder_base).joinpath('Script Logs', 'ProcessedFilesLog.html'), 'w+', encoding='utf8')
+    log.write(f'Extraction path selected: {cleaned_path(input_path)}<br><br>')
     log.write(f'Timezone selected: {time_offset}<br><br>')
     
     parsed_modules = 0
@@ -393,18 +388,18 @@ def crunch_artifacts(
             report_folder = Path(out_params.report_folder_base).joinpath('_HTML', 'iTunes Backup')
             if not Path(report_folder).exists():
                 try:
-                    os.makedirs(report_folder)
+                    Path.mkdir(report_folder, parents=True)
                 except (FileExistsError, FileNotFoundError) as ex:
-                    logfunc('Error creating report directory at path {}'.format(report_folder))
+                    logfunc('Error creating report directory at path {}'.format(cleaned_path(report_folder)))
                     logfunc('Error was {}'.format(str(ex)))
             loader['iTunesBackupInfo'].method(
                 [info_plist_path], report_folder, seeker, wrap_text, time_offset)
             report_folder = Path(out_params.report_folder_base).joinpath('_HTML', 'Installed Apps')
             if not Path(report_folder).exists():
                 try:
-                    os.makedirs(report_folder)
+                    Path.mkdir(report_folder, parents=True)
                 except (FileExistsError, FileNotFoundError) as ex:
-                    logfunc('Error creating report directory at path {}'.format(report_folder))
+                    logfunc('Error creating report directory at path {}'.format(cleaned_path(report_folder)))
                     logfunc('Error was {}'.format(str(ex)))
             loader['iTunesBackupInstalledApplications'].method(
                 [info_plist_path], report_folder, seeker, wrap_text, time_offset)
@@ -444,7 +439,7 @@ def crunch_artifacts(
             category_folder = Path(out_params.report_folder_base).joinpath('_HTML', plugin.category)
             if not Path(category_folder).exists():
                 try:
-                    os.makedirs(category_folder)
+                    Path.mkdir(category_folder, parents=True)
                 except (FileExistsError, FileNotFoundError) as ex:
                     logfunc('Error creating {} report directory at path {}'.format(
                         plugin.name, category_folder))
@@ -476,18 +471,11 @@ def crunch_artifacts(
 
     logfunc('')
     logfunc('Report generation started.')
-    # remove the \\?\ prefix we added to input and output paths, so it does not reflect in report
-    # if is_platform_windows(): 
-    #     if out_params.report_folder_base.startswith('\\\\?\\'):
-    #         out_params.report_folder_base = out_params.report_folder_base[4:]
-    #     if input_path.startswith('\\\\?\\'):
-    #         input_path = input_path[4:]
-    
     report.generate_report(out_params.report_folder_base, run_time_secs, run_time_HMS, 
                            extracttype, input_path, casedata, profile_filename, icons)
     logfunc('Report generation Completed.')
     logfunc('')
-    logfunc(f'Report location: {out_params.report_folder_base}')
+    logfunc(f'Report location: {cleaned_path(out_params.report_folder_base)}')
 
     return True
 

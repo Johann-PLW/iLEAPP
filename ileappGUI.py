@@ -9,7 +9,7 @@ import scripts.plugin_loader as plugin_loader
 from PIL import Image, ImageTk
 from tkinter import ttk, filedialog as tk_filedialog, messagebox as tk_msgbox
 from pathlib import Path
-from scripts.ilapfuncs import GuiWindow, OutputParameters
+from scripts.ilapfuncs import GuiWindow, OutputParameters, windows_long_path, cleaned_path
 from scripts.version_info import ileapp_version
 from scripts.modules_to_exclude import modules_to_exclude
 from scripts.lavafuncs import initialize_lava, lava_finalize_output
@@ -96,11 +96,12 @@ def load_profile():
             try:
                 profile = json.load(profile_in)
             except:
-                profile_load_error = 'File was not a valid profile file: invalid format'
+                profile_load_error = f'{Path(destination_path).name} is not a valid profile file: invalid format'
         if not profile_load_error:
             if isinstance(profile, dict):
                 if profile.get('leapp') != 'ileapp' or profile.get('format_version') != 1:
-                    profile_load_error = 'File was not a valid profile file: incorrect LEAPP or version'
+                    profile_load_error = f'{Path(destination_path).name} is not a valid profile file:\
+                          incorrect LEAPP or version'
                 else:
                     deselect_all()
                     ticked = set(profile.get('plugins', []))
@@ -109,13 +110,13 @@ def load_profile():
                             module_infos[-1].set(True)
                     get_selected_modules()
             else:
-                profile_load_error = 'File was not a valid profile file: invalid format'
+                profile_load_error = f'{Path(destination_path).name} is not a valid profile file: invalid format'
         if profile_load_error:
             tk_msgbox.showerror(title='Error', message=profile_load_error, parent=main_window)
         else:
-            profile_filename = destination_path
+            profile_filename = Path(destination_path)
             tk_msgbox.showinfo(
-                title='Profile loaded', message=f'Loaded profile: {destination_path}', parent=main_window)
+                title='Profile loaded', message=f'Loaded profile: {profile_filename}', parent=main_window)
 
 
 def save_profile():
@@ -130,7 +131,7 @@ def save_profile():
         with open(destination_path, 'wt', encoding='utf-8') as profile_out:
             json.dump({'leapp': 'ileapp', 'format_version': 1, 'plugins': selected_modules}, profile_out)
         tk_msgbox.showinfo(
-            title='Save a profile', message=f'Profile saved: {destination_path}', parent=main_window)
+            title='Save a profile', message=f'Profile saved: {Path(destination_path)}', parent=main_window)
 
 
 def scroll(event):
@@ -175,7 +176,7 @@ def ValidateInput():
 
 def open_report(report_path):
     '''Open report and Quit after processing completed'''
-    webbrowser.open_new_tab('file://' + report_path)
+    webbrowser.open_new_tab('file://' + cleaned_path(report_path))
     main_window.quit()
 
 
@@ -202,10 +203,13 @@ def process(casedata):
         output_folder = output_entry.get()
 
         # ios file system extractions contain paths > 260 char, which causes problems
-        # This fixes the problem by prefixing \\?\ on each windows path.
-        # if sys.platform == 'win32':
-        #     if input_path[1] == ':' and extracttype == 'fs': input_path = '\\\\?\\' + input_path.replace('/', '\\')
-        #     if output_folder[1] == ':': output_folder = '\\\\?\\' + output_folder.replace('/', '\\')
+        if sys.platform == 'win32':
+            if extracttype == 'fs':
+                input_path = windows_long_path(input_path)
+            output_folder = windows_long_path(output_folder)
+        
+        input_path = Path(input_path)
+        output_folder = Path(output_folder)
 
         # re-create modules list based on user selection
         selected_modules = get_selected_modules()
@@ -234,21 +238,16 @@ def process(casedata):
 
         if crunch_successful:
             report_path = Path(out_params.report_folder_base).joinpath('index.html')
-            # if report_path.startswith('\\\\?\\'):  # windows
-            #     report_path = report_path[4:]
-            # if report_path.startswith('\\\\'):  # UNC path
-            #     report_path = report_path[2:]
             progress_bar.grid_remove()
             open_report_button = ttk.Button(
-                main_window, text='Open Report & Close', command=lambda: open_report(str(report_path)))
+                main_window, text='Open Report & Close', command=lambda: open_report(report_path))
             open_report_button.grid(ipadx=8)
         else:
             log_path = Path(out_params.screen_output_file_path)
-            # if log_path.startswith('\\\\?\\'):  # windows
-            #     log_path = log_path[4:]
             tk_msgbox.showerror(
                 title='Error',
-                message=f'Processing failed  :( \nSee log for error details..\nLog file located at {log_path}',
+                message=f'Processing failed  :( \n\
+                    See log for error details..\nLog file located at {cleaned_path(log_path)}', 
                 parent=main_window)
 
 
@@ -297,7 +296,7 @@ def case_data():
             with open(destination_path, 'wt', encoding='utf-8') as case_data_out:
                 json.dump({'leapp': 'case_data', 'case_data_values': json_casedata}, case_data_out)
             tk_msgbox.showinfo(
-                title='Save Case Data', message=f'Case Data saved: {destination_path}', parent=case_window)
+                title='Save Case Data', message=f'Case Data saved: {Path(destination_path)}', parent=case_window)
 
     def load_case():
         '''Import case data from a Case Data file'''
@@ -311,11 +310,12 @@ def case_data():
                 try:
                     case_data = json.load(case_data_in)
                 except:
-                    case_data_load_error = 'File was not a valid case data file: invalid format'
+                    case_data_load_error = f'{Path(destination_path).name} is not a valid case data file: \
+                        invalid format'
             if not case_data_load_error:
                 if isinstance(case_data, dict):
                     if case_data.get('leapp') != 'case_data':
-                        case_data_load_error = 'File was not a valid case data file'
+                        case_data_load_error = f'{Path(destination_path).name} is not a valid case data file'
                     else:
                         casedata = case_data.get('case_data_values', {})
                         case_number_entry.delete(0, 'end')
@@ -325,12 +325,13 @@ def case_data():
                         case_examiner_entry.delete(0, 'end')
                         case_examiner_entry.insert(0, casedata.get('Examiner', ''))
                 else:
-                    case_data_load_error = 'File was not a valid case data file: invalid format'
+                    case_data_load_error = f'{Path(destination_path).name} is not a valid case data file: \
+                        invalid format'
             if case_data_load_error:
                 tk_msgbox.showerror(title='Error', message=case_data_load_error, parent=case_window)
             else:
                 tk_msgbox.showinfo(
-                    title='Load Case Data', message=f'Loaded Case Data: {destination_path}', parent=case_window)
+                    title='Load Case Data', message=f'Loaded Case Data: {Path(destination_path)}', parent=case_window)
 
     ### Case Data Window creation
     case_window = tk.Toplevel(main_window)
