@@ -188,7 +188,7 @@ def resource_path(filename):
     try:
         base_path = Path(sys._MEIPASS)
     except Exception:
-        base_path = Path.absolute(Path('.'))
+        base_path = Path.resolve(Path('.'))
 
     return base_path.joinpath('assets', filename)
 

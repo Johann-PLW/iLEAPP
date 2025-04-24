@@ -349,8 +349,7 @@ import sys
 import codecs
 import struct
 import json
-import traceback
-import os
+from pathlib import Path
 
 strings = []
 
@@ -510,7 +509,6 @@ def ParseData(data, start, end, messages, depth = 0):
                    if ret == False:
                        del strings[curStrIndex + 1:]     #pop failed result
                        messages.pop('%02d:%02d:repeated' % (field_number, ordinary), None)
-                       #print traceback.format_exc()
                        hexStr = ['0x%x' % x for x in data[start:start+stringLen]]
                        hexStr = ':'.join(hexStr)
                        strings.append("(%d) bytes: %s\n" % (field_number, hexStr))
@@ -812,7 +810,7 @@ if __name__ == "__main__":
         f = codecs.open('tmp.json', 'r', 'utf-8')
         messages = json.load(f, encoding='utf-8')
         f.close()
-        os.remove('tmp.json')
+        Path.unlink('tmp.json')
         
         # the modification is saved in file named "modified"
         #SaveModification(messages, "modified")

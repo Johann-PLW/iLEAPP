@@ -1,8 +1,7 @@
 import html
-from pathlib import Path
 from scripts.html_parts import *
 from scripts.version_info import ileapp_version
-from scripts.ilapfuncs import cleaned_path
+import scripts.ilapfuncs
 
 class ArtifactHtmlReport:
 
@@ -18,7 +17,7 @@ class ArtifactHtmlReport:
 
     def start_artifact_report(self, report_folder, artifact_file_name, artifact_description=''):
         '''Creates the report HTML file and writes the artifact name as a heading'''
-        self.report_file = open(Path(report_folder).joinpath(f'{artifact_file_name}.temphtml'), 'w', encoding='utf8')
+        self.report_file = open(report_folder.joinpath(f'{artifact_file_name}.temphtml'), 'w', encoding='utf8')
         self.report_file.write(page_header.format(f'iLEAPP - {self.artifact_name} report'))
         self.report_file.write(body_start.format(f'iLEAPP {ileapp_version}'))
         self.report_file.write(body_sidebar_setup)
@@ -82,7 +81,7 @@ class ArtifactHtmlReport:
         if write_total:
             self.write_minor_header(f'Total number of entries: {num_entries}', 'h6')
         if write_location:
-            self.write_lead_text(f'{self.artifact_name} located at: {cleaned_path(source_path)}')
+            self.write_lead_text(f'{self.artifact_name} located at: {scripts.ilapfuncs.cleaned_path(source_path)}')
 
         self.report_file.write('<br />')
 
