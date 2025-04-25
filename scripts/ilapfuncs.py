@@ -71,14 +71,14 @@ class OutputParameters:
             folder_name = custom_folder_name
         else:
             folder_name = 'iLEAPP_Reports_' + currenttime
-        self.report_folder_base = Path(output_folder).joinpath(folder_name)
-        self.data_folder = Path(self.report_folder_base).joinpath('data')
+        self.report_folder_base = output_folder.joinpath(folder_name)
+        self.data_folder = self.report_folder_base.joinpath('data')
         OutputParameters.screen_output_file_path = \
-            Path(self.report_folder_base).joinpath('Script Logs', 'Screen Output.html')
+            self.report_folder_base.joinpath('Script Logs', 'Screen Output.html')
         OutputParameters.screen_output_file_path_devinfo = \
-            Path(self.report_folder_base).joinpath('Script Logs', 'DeviceInfo.html')
+            self.report_folder_base.joinpath('Script Logs', 'DeviceInfo.html')
 
-        Path.mkdir(Path(self.report_folder_base).joinpath('Script Logs'), parents=True)
+        Path.mkdir(self.report_folder_base.joinpath('Script Logs'), parents=True)
         Path.mkdir(self.data_folder, parents=True)
         
 class GuiWindow:
@@ -283,12 +283,16 @@ def html_media_tag(media_path, mimetype, style, title=''):
     if mimetype == None:
         mimetype = ''
     if 'video' in mimetype:
-        thumb = f'<video width="320" height="240" controls="controls"><source src="{media_path}" type="video/mp4" preload="none">Your browser does not support the video tag.</video>'
+        thumb = f'<video width="320" height="240" controls="controls">\
+            <source src="{media_path}" type="video/mp4" preload="none">\
+            Your browser does not support the video tag.</video>'
     elif 'image' in mimetype:
         image_style = style if style else "max-height:300px; max-width:400px;"
-        thumb = f'<a href="{media_path}" target="_blank"><img title="{title}"  src="{media_path}" style="{image_style}"></img></a>'
+        thumb = f'<a href="{media_path}" target="_blank">\
+            <img title="{title}" src="{media_path}" style="{image_style}"></img></a>'
     elif 'audio' in mimetype:
-        thumb = f'<audio controls><source src="{media_path}" type="audio/ogg"><source src="{media_path}" type="audio/mpeg">Your browser does not support the audio element.</audio>'
+        thumb = f'<audio controls><source src="{media_path}" type="audio/ogg">\
+            <source src="{media_path}" type="audio/mpeg">Your browser does not support the audio element.</audio>'
     else:
         thumb = f'<a href="{media_path}" target="_blank"> Link to {filename} file</>'
     return thumb
@@ -371,21 +375,26 @@ def artifact_processor(func):
                 report = artifact_report.ArtifactHtmlReport(artifact_name)
                 report.start_artifact_report(report_folder, artifact_name, description)
                 report.add_script()
-                report.write_artifact_data_table(stripped_headers, html_data_list, source_path, html_no_escape=html_columns)
+                report.write_artifact_data_table(
+                    stripped_headers, html_data_list, source_path, html_no_escape=html_columns)
                 report.end_artifact_report()
 
             if check_output_types('tsv', output_types):
                 tsv(report_folder, stripped_headers, txt_data_list if media_header_info else data_list, artifact_name)
             
             if check_output_types('timeline', output_types):
-                timeline(report_folder, artifact_name, txt_data_list if media_header_info else data_list, stripped_headers)
+                timeline(
+                    report_folder, artifact_name, txt_data_list if media_header_info else data_list, stripped_headers)
 
             if check_output_types('lava', output_types):
-                table_name, object_columns, column_map = lava_process_artifact(category, module_name, artifact_name, data_headers, len(data_list), data_views=artifact_info.get("data_views"))
+                table_name, object_columns, column_map = lava_process_artifact(
+                    category, module_name, artifact_name, data_headers, len(data_list), 
+                    data_views=artifact_info.get("data_views"))
                 lava_insert_sqlite_data(table_name, data_list, object_columns, data_headers, column_map)
 
             if check_output_types('kml', output_types):
-                kmlgen(report_folder, artifact_name, txt_data_list if media_header_info else data_list, stripped_headers)
+                kmlgen(report_folder, artifact_name, 
+                       txt_data_list if media_header_info else data_list, stripped_headers)
 
         else:
             if output_types != 'none':
@@ -626,17 +635,15 @@ def does_view_exist_in_db(path, table_name):
 
 
 def tsv(report_folder, data_headers, data_list, tsvname, source_file=None):
-    # report_folder = report_folder.rstrip('/')
-    # report_folder = report_folder.rstrip('\\')
-    report_folder_base = os.path.dirname(os.path.dirname(report_folder))
-    tsv_report_folder = os.path.join(report_folder_base, '_TSV Exports')
+    report_folder_base = report_folder.parent.parent
+    tsv_report_folder = report_folder_base.joinpath('_TSV Exports')
 
-    if os.path.isdir(tsv_report_folder):
+    if tsv_report_folder.is_dir():
         pass
     else:
-        os.makedirs(tsv_report_folder)
+        Path.mkdir(tsv_report_folder, parents=True)
     
-    with codecs.open(os.path.join(tsv_report_folder, tsvname + '.tsv'), 'a', 'utf-8-sig') as tsvfile:
+    with codecs.open(tsv_report_folder.joinpath(tsvname + '.tsv'), 'a', 'utf-8-sig') as tsvfile:
         tsv_writer = csv.writer(tsvfile, delimiter='\t')
         tsv_writer.writerow(data_headers)
         
@@ -644,22 +651,20 @@ def tsv(report_folder, data_headers, data_list, tsvname, source_file=None):
             tsv_writer.writerow(i)
             
 def timeline(report_folder, tlactivity, data_list, data_headers):
-    # report_folder = report_folder.rstrip('/')
-    # report_folder = report_folder.rstrip('\\')
-    report_folder_base = os.path.dirname(os.path.dirname(report_folder))
-    tl_report_folder = os.path.join(report_folder_base, '_Timeline')
+    report_folder_base = report_folder.parent.parent
+    tl_report_folder = report_folder_base.joinpath('_Timeline')
 
-    if os.path.isdir(tl_report_folder):
-        tldb = os.path.join(tl_report_folder, 'tl.db')
+    if tl_report_folder.is_dir():
+        tldb = tl_report_folder.joinpath('tl.db')
         db = sqlite3.connect(tldb)
         cursor = db.cursor()
         cursor.execute('''PRAGMA synchronous = EXTRA''')
         cursor.execute('''PRAGMA journal_mode = WAL''')
         db.commit()
     else:
-        os.makedirs(tl_report_folder)
+        Path.mkdir(tl_report_folder, parents=True)
         # create database
-        tldb = os.path.join(tl_report_folder, 'tl.db')
+        tldb = tl_report_folder.joinpath('tl.db')
         db = sqlite3.connect(tldb, isolation_level = 'exclusive')
         cursor = db.cursor()
         cursor.execute(
@@ -710,20 +715,18 @@ def kmlgen(report_folder, kmlactivity, data_list, data_headers):
         a += 1
 
     if len(data) > 0:
-        report_folder = report_folder.rstrip('/')
-        report_folder = report_folder.rstrip('\\')
-        report_folder_base = os.path.dirname(os.path.dirname(report_folder))
-        kml_report_folder = os.path.join(report_folder_base, '_KML Exports')
-        if os.path.isdir(kml_report_folder):
-            latlongdb = os.path.join(kml_report_folder, '_latlong.db')
+        report_folder_base = report_folder.parent.parent
+        kml_report_folder = report_folder_base.joinpath('_KML Exports')
+        if kml_report_folder.is_dir():
+            latlongdb = kml_report_folder.joinpath('_latlong.db')
             db = sqlite3.connect(latlongdb)
             cursor = db.cursor()
             cursor.execute('''PRAGMA synchronous = EXTRA''')
             cursor.execute('''PRAGMA journal_mode = WAL''')
             db.commit()
         else:
-            os.makedirs(kml_report_folder)
-            latlongdb = os.path.join(kml_report_folder, '_latlong.db')
+            Path.mkdir(kml_report_folder, parents=True)
+            latlongdb = kml_report_folder.joinpath('_latlong.db')
             db = sqlite3.connect(latlongdb)
             cursor = db.cursor()
             cursor.execute(
@@ -736,7 +739,7 @@ def kmlgen(report_folder, kmlactivity, data_list, data_headers):
         cursor.executemany("INSERT INTO data VALUES(?, ?, ?, ?)", data)
         db.commit()
         db.close()
-        kml.save(os.path.join(kml_report_folder, f'{kmlactivity}.kml'))
+        kml.save(kml_report_folder.joinpath(f'{kmlactivity}.kml'))
 
 def media_to_html(media_path, files_found, report_folder):
 
