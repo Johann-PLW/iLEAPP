@@ -16,6 +16,7 @@
 # https://theapplewiki.com/wiki/Firmware
 
 from os.path import join
+OS_build = {}
 
 domains = {
     "AppDomain-": "private/var/mobile/Containers/Data/Application",

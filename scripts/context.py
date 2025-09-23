@@ -1,3 +1,4 @@
+import json
 from os.path import basename
 from pathlib import Path
 
@@ -10,7 +11,8 @@ class Context:
     _module_file_path = None
     _artifact_name = None
     _files_found = None
-    _filename_lookup_map = None
+    _filename_lookup_map = {}
+    _os_builds = {}
 
     @staticmethod
     def set_report_folder(report_folder):
@@ -19,7 +21,7 @@ class Context:
     @staticmethod
     def set_seeker(seeker):
         Context._seeker = seeker
-        
+
     @staticmethod
     def set_artifact_info(artifact_info):
         Context._artifact_info = artifact_info
@@ -41,10 +43,19 @@ class Context:
         Context._files_found = files_found
 
     @staticmethod
+    def _set_os_builds():
+        os_builds_path = Path(
+            __file__).parent.absolute().joinpath('data', 'os_builds.json')
+        with open(os_builds_path, 'rt', encoding='utf-8') as json_file:
+            Context._os_builds = json.load(json_file)
+
+    @staticmethod
     def _build_lookup_map():
-        """Builds and returns a dictionary mapping filenames to a list of full paths."""
+        """Builds and returns a dictionary mapping filenames to a list
+        of full paths."""
         if Context._files_found is None:
-            raise ValueError("Cannot build lookup map: _files_found is not set.")
+            raise ValueError(
+                "Cannot build lookup map: _files_found is not set.")
 
         filename_lookup = {}
         for full_path in Context._files_found:
@@ -57,48 +68,55 @@ class Context:
     @staticmethod
     def get_report_folder():
         if not Context._report_folder:
-            raise ValueError("Context not set. This function should be called from within an artifact.")
+            raise ValueError("Context not set. This function should be" +
+                             " called from within an artifact.")
         return Context._report_folder
 
     @staticmethod
     def get_seeker():
         if not Context._seeker:
-            raise ValueError("Context not set. This function should be called from within an artifact.")
+            raise ValueError("Context not set. This function should be" +
+                             " called from within an artifact.")
         return Context._seeker
 
     @staticmethod
     def get_artifact_info():
         if not Context._artifact_info:
-            raise ValueError("Context not set. This function should be called from within an artifact.")
+            raise ValueError("Context not set. This function should be" +
+                             " called from within an artifact.")
         return Context._artifact_info
 
     @staticmethod
     def get_module_name():
         if not Context._module_name:
-            raise ValueError("Context not set. This function should be called from within an artifact.")
+            raise ValueError("Context not set. This function should be" +
+                             " called from within an artifact.")
         return Context._module_name
 
     @staticmethod
     def get_module_file_path():
         if not Context._module_file_path:
-            raise ValueError("Context not set. This function should be called from within an artifact.")
+            raise ValueError("Context not set. This function should be" +
+                             " called from within an artifact.")
         return Context._module_file_path
 
     @staticmethod
     def get_artifact_name():
         if not Context._artifact_name:
-            raise ValueError("Context not set. This function should be called from within an artifact.")
+            raise ValueError("Context not set. This function should be" +
+                             " called from within an artifact.")
         return Context._artifact_name
 
     @staticmethod
     def get_files_found():
         if Context._files_found is None:
-            raise ValueError("Context not set. This function should be called from within an artifact.")
+            raise ValueError("Context not set. This function should be" +
+                             " called from within an artifact.")
         return Context._files_found
 
     @staticmethod
     def get_filename_lookup_map():
-        if Context._filename_lookup_map is None:
+        if not Context._filename_lookup_map:
             Context._filename_lookup_map = Context._build_lookup_map()
         return Context._filename_lookup_map
 
@@ -112,14 +130,17 @@ class Context:
         the match using the full partial path provided.
 
         Args:
-            partial_path (str): The partial or relative path of the file to find.
+            partial_path (str): The partial or relative path of the file
+                                 to find.
 
         Returns:
-            str: The full path of the matching source file, or None if not found.
+            str: The full path of the matching source file, or None
+                  if not found.
         """
         lookup_map = Context.get_filename_lookup_map()
 
-        # Defensive check to satisfy the linter. This state should not be possible in practice.
+        # Defensive check to satisfy the linter.
+        # This state should not be possible in practice.
         if lookup_map is None:
             return None
 
@@ -130,8 +151,20 @@ class Context:
             for candidate in candidate_paths:
                 if Path(candidate).match(partial_path):
                     return candidate
-        
+
         return None
+
+    @staticmethod
+    def get_os_name(build, device_type=None):
+        if not Context._os_builds:
+            Context._set_os_builds()
+        if device_type is None:
+            os_name = []
+            for os_family, builds in Context._os_builds.items():
+                if build in builds:
+                    os_name.append(Context._os_builds[os_family][build])
+            return (" or ").join(os_name)
+        return 'Unknown'
 
     @staticmethod
     def clear():

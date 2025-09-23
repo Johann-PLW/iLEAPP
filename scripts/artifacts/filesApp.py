@@ -506,8 +506,10 @@ def iCloudDriveFavouriteFiles(files_found, report_folder, seeker, wrap_text, tim
             
     return data_headers, data_list, source_path
 
+
 @artifact_processor
-def FilesIosUpdates(files_found, report_folder, seeker, wrap_text, timezone_offset):
+def FilesIosUpdates(context):
+    files_found = context.get_files_found()
     source_path = get_file_path(files_found, "client.db")
     data_list = []
 
@@ -517,16 +519,15 @@ def FilesIosUpdates(files_found, report_folder, seeker, wrap_text, timezone_offs
         boot_history.os
     FROM boot_history
     '''
-    data_headers = (('Date and Time', 'datetime'), 'OS Build', 'OS Version')     
+    data_headers = (('Date and Time', 'datetime'), 'OS Build', 'OS Version')
 
     db_records = get_sqlite_db_records(source_path, query)
 
     for record in db_records:
-        os_date, os_os  = record
+        os_date, os_os = record
         os_date = convert_unix_ts_to_utc(os_date)
-        os_version = OS_build.get(os_os, '')
+        os_version = context.get_os_name(os_os)
 
         data_list.append((os_date, os_os, os_version))
 
-    
     return data_headers, data_list, source_path
