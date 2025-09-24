@@ -1,4 +1,5 @@
 import json
+import re
 from os.path import basename
 from pathlib import Path
 
@@ -12,6 +13,7 @@ class Context:
     _artifact_name = None
     _files_found = None
     _filename_lookup_map = {}
+    _device_ids = {}
     _os_builds = {}
 
     @staticmethod
@@ -41,6 +43,13 @@ class Context:
     @staticmethod
     def set_files_found(files_found):
         Context._files_found = files_found
+
+    @staticmethod
+    def _set_device_ids():
+        device_ids_path = Path(
+            __file__).parent.absolute().joinpath('data', 'device_ids.json')
+        with open(device_ids_path, 'rt', encoding='utf-8') as json_file:
+            Context._device_ids = json.load(json_file)
 
     @staticmethod
     def _set_os_builds():
@@ -155,16 +164,36 @@ class Context:
         return None
 
     @staticmethod
-    def get_os_name(build, device_type=None):
+    def get_device_model(identifier):
+        if not Context._device_ids:
+            Context._set_device_ids()
+        return Context._device_ids.get(identifier, '')
+
+    @staticmethod
+    def get_os_version(build, device_type=''):
         if not Context._os_builds:
             Context._set_os_builds()
-        if device_type is None:
-            os_name = []
-            for os_family, builds in Context._os_builds.items():
-                if build in builds:
-                    os_name.append(Context._os_builds[os_family][build])
-            return (" or ").join(os_name)
-        return 'Unknown'
+        if 'iPhone' in device_type:
+            return Context._os_builds['iOS'].get(build, '')
+        if 'iPad' in device_type:
+            kernel_major_version = int(re.match(r'^(\d+)', build).group(1))
+            if kernel_major_version >= 17:
+                return Context._os_builds['iOS'].get(
+                    build, '').replace('iOS', 'iPadOS')
+            return Context._os_builds['iOS'].get(build, '')
+        if 'Mac' in device_type:
+            return Context._os_builds['macOS'].get(build, '')
+        if 'RealityDevice' in device_type:
+            return Context._os_builds['visionOS'].get(build, '')
+        if 'Watch' in device_type:
+            return Context._os_builds['watchOS'].get(build, '')
+        if 'AppleTV' in device_type:
+            return Context._os_builds['tvOS'].get(build, '')
+        os_version = []
+        for os_family, builds in Context._os_builds.items():
+            if build in builds:
+                os_version.append(Context._os_builds[os_family][build])
+        return (" or ").join(os_version)
 
     @staticmethod
     def clear():
