@@ -176,10 +176,13 @@ class Context:
         if 'iPhone' in device_type:
             return Context._os_builds['iOS'].get(build, '')
         if 'iPad' in device_type:
-            kernel_major_version = int(re.match(r'^(\d+)', build).group(1))
-            if kernel_major_version >= 17:
-                return Context._os_builds['iOS'].get(
-                    build, '').replace('iOS', 'iPadOS')
+            try:
+                kernel_major_version = int(re.match(r'^(\d+)', build).group(1))
+                if kernel_major_version >= 17:
+                    return Context._os_builds['iOS'].get(
+                        build, '').replace('iOS', 'iPadOS')
+            except TypeError:
+                pass
             return Context._os_builds['iOS'].get(build, '')
         if 'Mac' in device_type:
             return Context._os_builds['macOS'].get(build, '')

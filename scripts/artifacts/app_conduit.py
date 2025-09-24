@@ -31,25 +31,9 @@ from scripts.ilapfuncs import artifact_processor, get_txt_file_content, \
 @artifact_processor
 def app_conduit(context):
     """
-     file found, extracting .
-    Parses each log file found and extracts lines that match a specific regular
-    expression pattern. extract device connection and disconnection events,
+    Parses each log file found and from lines that match a specific regular
+    expression pattern extracts device connection and disconnection events,
     along with associated device information.
-    For each matching line, determines if the event is a device connection or
-    disconnection, than extracts relevant device information.
-
-    Args:
-        context: An object providing methods and data for file access and
-                    device information lookup.
-
-    Returns:
-        tuple:
-            - data_headers (tuple): Column headers describing the extracted
-                data fields.
-            - data_list (list): List of tuples, each representing a device
-                connection or disconnection event with associated metadata.
-            - source_path (str): Comma-separated string of source files
-                processed.
     """
 
     files_found = context.get_files_found()
