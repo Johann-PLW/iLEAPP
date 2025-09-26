@@ -18,8 +18,9 @@ from scripts.ilapfuncs import convert_ts_human_to_utc, convert_utc_human_to_time
 from scripts.builds_ids import OS_build
 
 @artifact_processor
-def get_photosMigration(files_found, report_folder, seeker, wrap_text, timezone_offset):
-    for file_found in files_found:
+# def get_photosMigration(files_found, report_folder, seeker, wrap_text, timezone_offset):
+def get_photosMigration(context):
+    for file_found in context.get_files_found():
         file_found = str(file_found)
         if file_found.endswith('.sqlite'):
             break
@@ -55,15 +56,19 @@ def get_photosMigration(files_found, report_folder, seeker, wrap_text, timezone_
     data_list = []
 
     for row in all_rows:
-        ios_version = row[9] + ' - ' + OS_build[row[9]]
+        ios_version = context.get_os_version(row[9])
+        # ios_version = row[9] + ' - ' + OS_build.get(row[9], row[9])
         timestamp = convert_ts_human_to_utc(row[3])
-        timestamp = convert_utc_human_to_timezone(timestamp,timezone_offset)
+        # timestamp = convert_utc_human_to_timezone(timestamp,timezone_offset)
 
-        data_list.append((timestamp, row[4], row[5], row[6], row[7], row[8], ios_version, row[10], row[11]))
+        data_list.append((timestamp, row[4], row[5], row[6], row[7], row[8],
+                          row[9], ios_version, row[10], row[11]))
 
     db.close()
 
-    data_headers = (('Timestamp', 'datetime'), 'Migration Index', 'Type', 'Force Rebuild Reason', 'Source Model Version',
-                    'Model Version', 'Build/iOS Version', 'Origin', 'Store UUID')
+    data_headers = (('Timestamp', 'datetime'), 'Migration Index', 'Type',
+                    'Force Rebuild Reason', 'Source Model Version',
+                    'Model Version', 'Build', 'OS Name', 'Origin',
+                    'Store UUID')
 
     return data_headers, data_list, file_found

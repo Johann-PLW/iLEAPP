@@ -27,7 +27,7 @@ __artifacts_v2__ = {
         "output_types": "standard",
         "artifact_icon": "smartphone"
     },
-     "ConnectedDeviceInformation_CurrentDeviceInfo": {
+    "connected_device_information_current_device_info": {
         "name": "Connected Device Information - Current Device Information",
         "description": "Connected Devices",
         "author": "@SQLMcGee",
@@ -46,7 +46,10 @@ __artifacts_v2__ = {
 
 from packaging import version
 from scripts.builds_ids import OS_build, device_id
-from scripts.ilapfuncs import artifact_processor, open_sqlite_db_readonly, convert_ts_human_to_timezone_offset
+from scripts.ilapfuncs import artifact_processor, get_file_path, \
+    does_table_exist_in_db, get_sqlite_db_records, logfunc, \
+    convert_cocoa_core_data_ts_to_utc
+from scripts.ilapfuncs import open_sqlite_db_readonly, convert_ts_human_to_timezone_offset
 
 @artifact_processor
 def ConnectedDeviceInformation_DeviceHistory(files_found, report_folder, seeker, wrap_text, timezone_offset):
@@ -133,51 +136,36 @@ def ConnectedDeviceInformation_ConsolidatedConnectedDeviceHistory(files_found, r
         ('Start Time', 'datetime'), ('End Time', 'datetime'), 'Product Origin (Common Name)', 'Product Origin')
     return data_headers, data_list, healthdb_secure
 
+
 @artifact_processor
-def ConnectedDeviceInformation_CurrentDeviceInfo(files_found, report_folder, seeker, wrap_text, timezone_offset):
+def connected_device_information_current_device_info(context):
+    files_found = context.get_files_found()
+    source_path = get_file_path(files_found, 'healthdb.sqlite')
     data_list = []
-    healthdb = ''
 
-    for file_found in files_found:
-        if file_found.endswith('healthdb.sqlite'):
-            healthdb = file_found
-            break
-    else:
-        return ('No healthdb.sqlite file found.', [], '')
-
-    try:
-        with open_sqlite_db_readonly(healthdb) as db:
-            cursor = db.cursor()
-
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='device_context';")
-            table_exists = cursor.fetchone()
-            
-            if not table_exists:
-                print("Note: The 'device_context' table was not found in this database - only in newer OS versions.")
-                return ('device_context table missing', [], healthdb)
-
-            cursor.execute('''
-            Select 
-            (datetime(device_context.date_modified + 978307200, 'UNIXEPOCH')) AS "Date Modified",
-            device_context.product_type_name AS 'Product Origin (Common Name)',
-            device_context.product_type_name AS "Origin Product",
-            device_context.currentOS_name || " " || device_context.currentOS_version As "OS Version"
-            From device_context;
-            ''')
-
-            all_rows = cursor.fetchall()
-
-            for row in all_rows:
-                product_type_name = device_id.get(row[1], row[1])
-                mod_timestamp = convert_ts_human_to_timezone_offset(row[0], timezone_offset)
-                data_list.append(
-                    (mod_timestamp, product_type_name, row[2], row[3]))
-
-    except Exception as e:
-        # Catch any unexpected errors
-        print(f"An unexpected error occurred: {e}")
-        return ('An unexpected error occurred.', [], healthdb)
+    query = '''
+    SELECT
+        device_context.date_modified,
+        device_context.product_type_name,
+        device_context.currentOS_name || " " ||
+            device_context.currentOS_version As "OS Version"
+    FROM device_context;
+    '''
 
     data_headers = (
-        ('Modified Time', 'datetime'), 'Device Origin (Common Name)', 'Device Origin', 'OS Version')
-    return data_headers, data_list, healthdb
+        ('Modified Time', 'datetime'), 'Product Type', 'Device Model',
+        'OS Version')
+
+    if does_table_exist_in_db(source_path, 'device_context'):
+        db_records = get_sqlite_db_records(source_path, query)
+        for record in db_records:
+            device_model = context.get_device_model(record[1])
+            mod_timestamp = convert_cocoa_core_data_ts_to_utc(record[0])
+            data_list.append(
+                (mod_timestamp, record[1], device_model, record[2]))
+    else:
+        missing_table_message = "Note: The 'device_context' table was not " + \
+            "found in this database - only in newer OS versions."
+        logfunc(missing_table_message)
+
+    return data_headers, data_list, source_path

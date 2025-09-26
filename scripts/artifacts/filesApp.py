@@ -101,8 +101,8 @@ __artifacts_v2__ = {
 }
 
 from packaging import version
-from scripts.builds_ids import OS_build
 from scripts.ilapfuncs import artifact_processor, get_file_path, attach_sqlite_db_readonly, get_sqlite_db_records, get_plist_content, convert_bytes_to_unit, convert_unix_ts_to_utc, iOS
+
 
 def get_tree_structure(source_path):
 
@@ -130,11 +130,13 @@ def get_tree_structure(source_path):
             ts_p_id, ts_name = tree_structure_dict[ts_p_id]
             ts_path = ts_name + "/" + ts_path
         tree_structure_paths[ts_key] = f"{ts_path}/"
-    
+
     return tree_structure_paths
 
+
 @artifact_processor
-def iCloudSyncDeviceNames(files_found, report_folder, seeker, wrap_text, timezone_offset):
+def iCloudSyncDeviceNames(context):
+    files_found = context.get_files_found()
     source_path = get_file_path(files_found, "server.db")
     data_list = []
 
@@ -148,11 +150,13 @@ def iCloudSyncDeviceNames(files_found, report_folder, seeker, wrap_text, timezon
     data_headers = ('Device Number', 'Device Name')
 
     data_list = get_sqlite_db_records(source_path, query)
-    
+
     return data_headers, data_list, source_path
 
+
 @artifact_processor
-def iCloudApplicationList(files_found, report_folder, seeker, wrap_text, timezone_offset):
+def iCloudApplicationList(context):
+    files_found = context.get_files_found()
     source_path = get_file_path(files_found, "client.db")
     data_list = []
 
@@ -166,7 +170,8 @@ def iCloudApplicationList(files_found, report_folder, seeker, wrap_text, timezon
             app_libraries.auto_aggregate_size
         FROM app_libraries
         '''
-        data_headers = ('Application Bundle ID', 'Number of folders', 'Number of files', ('Total size in bytes', 'bytes'))
+        data_headers = ('Application Bundle ID', 'Number of folders',
+                        'Number of files', ('Total size in bytes', 'bytes'))
     else:
         query = '''
         SELECT 
@@ -176,11 +181,13 @@ def iCloudApplicationList(files_found, report_folder, seeker, wrap_text, timezon
         data_headers = ('Application Bundle ID', )
 
     data_list = get_sqlite_db_records(source_path, query)
-    
+
     return data_headers, data_list, source_path
 
+
 @artifact_processor
-def iCloudDriveStoredFiles(files_found, report_folder, seeker, wrap_text, timezone_offset):
+def iCloudDriveStoredFiles(context):
+    files_found = context.get_files_found()
     source_path = get_file_path(files_found, "client.db")
     server_db_path = get_file_path(files_found, "server.db")
     data_list = []
@@ -212,32 +219,33 @@ def iCloudDriveStoredFiles(files_found, report_folder, seeker, wrap_text, timezo
     '''
 
     data_headers = (
-        ('Created', 'datetime'), 
-        ('Modified', 'datetime'), 
-        ('Last opened', 'datetime'), 
-        'Application Bundle ID', 
-        'Path', 
-        'Filename', 
-        'Hidden extension', 
-        'Size in bytes', 
-        'Size', 
-        'From Device Name', 
-        'Shared?', 
+        ('Created', 'datetime'),
+        ('Modified', 'datetime'),
+        ('Last opened', 'datetime'),
+        'Application Bundle ID',
+        'Path',
+        'Filename',
+        'Hidden extension',
+        'Size in bytes',
+        'Size',
+        'From Device Name',
+        'Shared?',
         'Visible?',
-        'Recently Deleted')     
+        'Recently Deleted')
 
     db_records = get_sqlite_db_records(source_path, query, attach_query)
     if db_records:
         parents = get_tree_structure(source_path)
-    
+
     for record in db_records:
-        cdate, mdate, lodate, app_id, parent_id, filename, ext, size_in_bytes, device, \
-            sharing_options, visible, trash_back_path = record
+        cdate, mdate, lodate, app_id, parent_id, filename, ext, \
+            size_in_bytes, device, sharing_options, visible, \
+            trash_back_path = record
 
         path = ''
         if len(parent_id) == 16:
             path = parents.get(parent_id, '')
-        
+
         if not isinstance(size_in_bytes, int):
             path += f"{filename}/"
             filename = ""
@@ -245,21 +253,24 @@ def iCloudDriveStoredFiles(files_found, report_folder, seeker, wrap_text, timezo
         size = size_in_bytes
         if size:
             size = convert_bytes_to_unit(size_in_bytes)
-        
+
         cdate = convert_unix_ts_to_utc(cdate) if cdate and cdate > 0 else ''
         mdate = convert_unix_ts_to_utc(mdate) if mdate and mdate > 0 else ''
         lodate = convert_unix_ts_to_utc(lodate) if lodate and lodate > 0 else ''
 
         shared = 'No' if sharing_options <= 4 else 'Yes'
         recently_deleted = 'Yes' if trash_back_path else 'No'
-        
-        data_list.append((cdate, mdate, lodate, app_id, path, filename, ext, size_in_bytes, 
-                          size, device, shared, visible, recently_deleted))
-            
+
+        data_list.append((cdate, mdate, lodate, app_id, path, filename, ext,
+                          size_in_bytes, size, device, shared, visible,
+                          recently_deleted))
+
     return data_headers, data_list, source_path
 
+
 @artifact_processor
-def iCloudDriveSharedFiles(files_found, report_folder, seeker, wrap_text, timezone_offset):
+def iCloudDriveSharedFiles(context):
+    files_found = context.get_files_found()
     source_path = get_file_path(files_found, "client.db")
     server_db_path = get_file_path(files_found, "server.db")
     data_list = []
@@ -281,42 +292,43 @@ def iCloudDriveSharedFiles(files_found, report_folder, seeker, wrap_text, timezo
         server.devices.name AS 'Device',
         client_items.item_sharing_options AS 'Is Shared?',
         client_items.item_creator_id AS 'Creator ID?',
-		server.users.user_plist,
+        server.users.user_plist,
         client_items.item_trash_put_back_path AS 'Recently Deleted'
     FROM client_items
     LEFT JOIN app_libraries ON client_items.app_library_rowid = app_libraries.rowid
-	LEFT JOIN server.devices ON client_items.version_device = server.devices.key
-	LEFT JOiN server.users ON client_items.item_creator_id = server.users.user_key
-	WHERE client_items.item_sharing_options > 4
+    LEFT JOIN server.devices ON client_items.version_device = server.devices.key
+    LEFT JOiN server.users ON client_items.item_creator_id = server.users.user_key
+    WHERE client_items.item_sharing_options > 4
     '''
 
     data_headers = (
-        ('Created', 'datetime'), 
-        ('Modified', 'datetime'), 
-        ('Last opened', 'datetime'), 
-        'Application Bundle ID', 
-        'Path', 
-        'Filename', 
-        'Hidden extension', 
-        'Size in bytes', 
-        'Size', 
-        'From Device Name', 
-        'Shared by', 
+        ('Created', 'datetime'),
+        ('Modified', 'datetime'),
+        ('Last opened', 'datetime'),
+        'Application Bundle ID',
+        'Path',
+        'Filename',
+        'Hidden extension',
+        'Size in bytes',
+        'Size',
+        'From Device Name',
+        'Shared by',
         'Permissions',
-        'Recently Deleted')     
+        'Recently Deleted')
 
     db_records = get_sqlite_db_records(source_path, query, attach_query)
     if db_records:
         parents = get_tree_structure(source_path)
-    
+
     for record in db_records:
-        cdate, mdate, lodate, app_id, parent_id, filename, ext, size_in_bytes, device, \
-            sharing_options, creator_id, user_plist, trash_back_path = record
+        cdate, mdate, lodate, app_id, parent_id, filename, ext, \
+            size_in_bytes, device, sharing_options, creator_id, user_plist, \
+            trash_back_path = record
 
         path = ''
         if len(parent_id) == 16:
             path = parents.get(parent_id, '')
-        
+
         if not isinstance(size_in_bytes, int):
             path += f"{filename}/"
             filename = ""
@@ -324,7 +336,7 @@ def iCloudDriveSharedFiles(files_found, report_folder, seeker, wrap_text, timezo
         size = size_in_bytes
         if size:
             size = convert_bytes_to_unit(size_in_bytes)
-        
+
         cdate = convert_unix_ts_to_utc(cdate) if cdate and cdate > 0 else ''
         mdate = convert_unix_ts_to_utc(mdate) if mdate and mdate > 0 else ''
         lodate = convert_unix_ts_to_utc(lodate) if lodate and lodate > 0 else ''
@@ -350,14 +362,16 @@ def iCloudDriveSharedFiles(files_found, report_folder, seeker, wrap_text, timezo
         shared_by = creator_name if creator_id else 'me'
 
         recently_deleted = 'Yes' if trash_back_path else 'No'
-        
+
         data_list.append((cdate, mdate, lodate, app_id, path, filename, ext, size_in_bytes, 
                           size, device, shared_by, sharing_permissions, recently_deleted))
-            
+
     return data_headers, data_list, source_path
 
+
 @artifact_processor
-def iCloudDriveTaggedFiles(files_found, report_folder, seeker, wrap_text, timezone_offset):
+def iCloudDriveTaggedFiles(context):
+    files_found = context.get_files_found()
     source_path = get_file_path(files_found, "client.db")
     server_db_path = get_file_path(files_found, "server.db")
     data_list = []
@@ -386,31 +400,31 @@ def iCloudDriveTaggedFiles(files_found, report_folder, seeker, wrap_text, timezo
     '''
 
     data_headers = (
-        ('Created', 'datetime'), 
-        ('Modified', 'datetime'), 
-        ('Last opened', 'datetime'), 
-        'Application Bundle ID', 
-        'Path', 
-        'Filename', 
-        'Hidden extension', 
-        'Tags', 
-        'Size in bytes', 
-        'Size', 
-        'From Device Name', 
-        'Recently Deleted')     
+        ('Created', 'datetime'),
+        ('Modified', 'datetime'),
+        ('Last opened', 'datetime'),
+        'Application Bundle ID',
+        'Path',
+        'Filename',
+        'Hidden extension',
+        'Tags',
+        'Size in bytes',
+        'Size',
+        'From Device Name',
+        'Recently Deleted')
 
     db_records = get_sqlite_db_records(source_path, query, attach_query)
     if db_records:
         parents = get_tree_structure(source_path)
-    
+
     for record in db_records:
-        cdate, mdate, lodate, app_id, parent_id, filename, ext, tags, size_in_bytes, device, \
-            trash_back_path = record
+        cdate, mdate, lodate, app_id, parent_id, filename, ext, tags, \
+            size_in_bytes, device, trash_back_path = record
 
         path = ''
         if len(parent_id) == 16:
             path = parents.get(parent_id, '')
-        
+
         if not isinstance(size_in_bytes, int):
             path += f"{filename}/"
             filename = ""
@@ -418,7 +432,7 @@ def iCloudDriveTaggedFiles(files_found, report_folder, seeker, wrap_text, timezo
         size = size_in_bytes
         if size:
             size = convert_bytes_to_unit(size_in_bytes)
-        
+
         cdate = convert_unix_ts_to_utc(cdate) if cdate and cdate > 0 else ''
         mdate = convert_unix_ts_to_utc(mdate) if mdate and mdate > 0 else ''
         lodate = convert_unix_ts_to_utc(lodate) if lodate and lodate > 0 else ''
@@ -427,14 +441,16 @@ def iCloudDriveTaggedFiles(files_found, report_folder, seeker, wrap_text, timezo
             tags = ', '.join(tags.decode('utf-8').split())
 
         recently_deleted = 'Yes' if trash_back_path else 'No'
-        
-        data_list.append((cdate, mdate, lodate, app_id, path, filename, ext, tags, size_in_bytes, 
-                          size, device, recently_deleted))
-            
+
+        data_list.append((cdate, mdate, lodate, app_id, path, filename, ext,
+                          tags, size_in_bytes, size, device, recently_deleted))
+
     return data_headers, data_list, source_path
 
+
 @artifact_processor
-def iCloudDriveFavouriteFiles(files_found, report_folder, seeker, wrap_text, timezone_offset):
+def iCloudDriveFavouriteFiles(context):
+    files_found = context.get_files_found()
     source_path = get_file_path(files_found, "client.db")
     server_db_path = get_file_path(files_found, "server.db")
     data_list = []
@@ -458,30 +474,30 @@ def iCloudDriveFavouriteFiles(files_found, report_folder, seeker, wrap_text, tim
         client_items.item_favoriterank AS 'Favourite'
     FROM client_items
     LEFT JOIN app_libraries ON client_items.app_library_rowid = app_libraries.rowid
-	LEFT JOIN server.devices ON client_items.version_device = server.devices.key
-	WHERE client_items.item_favoriterank != 0
+    LEFT JOIN server.devices ON client_items.version_device = server.devices.key
+    WHERE client_items.item_favoriterank != 0
     '''
 
     data_headers = (
-        ('Created', 'datetime'), 
-        ('Modified', 'datetime'), 
-        ('Last opened', 'datetime'), 
-        'Application Bundle ID', 
-        'Path', 
-        'Filename', 
-        'Hidden extension', 
-        'Size in bytes', 
-        'Size', 
-        'From Device Name', 
-        'Recently Deleted')     
+        ('Created', 'datetime'),
+        ('Modified', 'datetime'),
+        ('Last opened', 'datetime'),
+        'Application Bundle ID',
+        'Path',
+        'Filename',
+        'Hidden extension',
+        'Size in bytes',
+        'Size',
+        'From Device Name',
+        'Recently Deleted')
 
     db_records = get_sqlite_db_records(source_path, query, attach_query)
     if db_records:
         parents = get_tree_structure(source_path)
     
     for record in db_records:
-        cdate, mdate, lodate, app_id, parent_id, filename, ext, size_in_bytes, \
-            device, trash_back_path, favourite = record
+        cdate, mdate, lodate, app_id, parent_id, filename, ext, \
+            size_in_bytes, device, trash_back_path, favourite = record
 
         path = ''
         if len(parent_id) == 16:
@@ -501,7 +517,7 @@ def iCloudDriveFavouriteFiles(files_found, report_folder, seeker, wrap_text, tim
 
         recently_deleted = 'Yes' if trash_back_path else 'No'
         
-        data_list.append((cdate, mdate, lodate, app_id, path, filename, ext, size_in_bytes, 
+        data_list.append((cdate, mdate, lodate, app_id, path, filename, ext,
                           size, device, recently_deleted))
             
     return data_headers, data_list, source_path
@@ -526,7 +542,7 @@ def FilesIosUpdates(context):
     for record in db_records:
         os_date, os_os = record
         os_date = convert_unix_ts_to_utc(os_date)
-        os_version = context.get_os_name(os_os)
+        os_version = context.get_os_version(os_os)
 
         data_list.append((os_date, os_os, os_version))
 
