@@ -104,8 +104,8 @@ def initialize_lava(input_path, output_path, input_type):
             "OS": platform(),
             "start_timestamp": int(datetime.datetime.now(datetime.timezone.utc).timestamp())
         },
-        "param_input": input_path,
-        "param_output": output_path,
+        "param_input": input_path.as_posix(),
+        "param_output": output_path.as_posix(),
         "param_type": input_type,
         "processing_status": "In Progress",
         "lava_db_name": lava_db_name,

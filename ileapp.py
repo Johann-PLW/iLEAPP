@@ -4,14 +4,15 @@
 
 import sys
 import argparse
-import leapps.functions as leapps
-
 from pathlib import Path
 
-from scripts.lavafuncs import initialize_lava, lava_finalize_output
-from leapps.functions.artifacts.crunch_artifacts import crunch_artifacts
+from leapps.functions import \
+    ArtifactLoader, Context, OutputParameters, \
+    create_casedata, load_casedata, create_profile, load_profile, crunch_artifacts, \
+    ARTIFACT_PATHS, leapp
 
-leapp = leapps.convert_json_file_to_namedtuple("leapps/settings.json")
+
+from scripts.lavafuncs import initialize_lava, lava_finalize_output
 
 
 def validate_args(args):
@@ -113,10 +114,10 @@ def main():
     args = parser.parse_args()
 
     available_artifacts = []
-    loader_paths = [leapps.artifacts.artifact_loader.ARTIFACT_PATHS]
+    loader_paths = [ARTIFACT_PATHS]
     if args.custom_artifacts_path:
         loader_paths.append(Path(args.custom_artifacts_path))
-    loader = leapps.ArtifactLoader(artifact_paths=loader_paths)
+    loader = ArtifactLoader(artifact_paths=loader_paths)
     for artifact in sorted(loader.artifacts, key=lambda p: p.category):
         if (artifact.module_name == 'iTunesBackupInfo'
                 or artifact.name == 'last_build'
@@ -165,10 +166,10 @@ def main():
                 create_choice = input("Please enter your choice: ").lower()
                 print()
                 if create_choice == "1":
-                    leapps.create_profile(leapp, available_artifacts, args.create_profile_casedata)
+                    create_profile(leapp, available_artifacts, args.create_profile_casedata)
                     create_choice = ""
                 elif create_choice == "2":
-                    leapps.create_casedata(leapp, args.create_profile_casedata)
+                    create_casedata(leapp, args.create_profile_casedata)
                     create_choice = ""
                 elif create_choice == "q":
                     return
@@ -181,10 +182,10 @@ def main():
             return
 
     if args.load_case_data:
-        casedata = leapps.load_casedata(args.load_case_data)
+        casedata = load_casedata(args.load_case_data)
 
     if args.load_profile:
-        selected_artifacts = leapps.load_profile(leapp, args.load_profile, available_artifacts)
+        selected_artifacts = load_profile(leapp, args.load_profile, available_artifacts)
 
     extracttype = args.t
     input_path = Path(args.input_path)
@@ -201,8 +202,8 @@ def main():
         if output_path.drive:
             output_path = Path(r"\\?\\" + output_path.as_posix().replace('/', '\\'))
 
-    out_params = leapps.OutputParameters(leapp, output_path, custom_output_folder)
-    leapps.Context.set_output_params(out_params)
+    out_params = OutputParameters(leapp, output_path, custom_output_folder)
+    Context.set_output_params(out_params)
 
     initialize_lava(input_path, out_params.output_folder_base, extracttype)
 

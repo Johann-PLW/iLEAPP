@@ -1,10 +1,10 @@
 import typing
-import artifact_loader as plugin_loader
+from . import artifact_loader as plugin_loader
 
 
 def crunch_artifacts(
-        plugins: typing.Sequence[plugin_loader.PluginSpec], extracttype, input_path, out_params, wrap_text,
-        loader: plugin_loader.PluginLoader, casedata, time_offset, profile_filename, itunes_backup_password=None, decryption_keys=None):
+        plugins: typing.Sequence[plugin_loader.ArtifactSpec], extracttype, input_path, out_params, wrap_text,
+        loader: plugin_loader.ArtifactLoader, casedata, time_offset, profile_filename, itunes_backup_password=None, decryption_keys=None):
     # start = process_time()
     # start_wall = perf_counter()
 
