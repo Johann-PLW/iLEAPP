@@ -1,68 +1,87 @@
 import typing
-from . import artifact_loader as plugin_loader
+import io
+import traceback
+
+from time import process_time, perf_counter
+from getpass import getpass
+
+from . import artifact_loader, context
+from ..data_sources.search_files import \
+    FileSeekerDir, FileSeekerFile, FileSeekerTar, FileSeekerZip, FileSeekerItunes, \
+    get_itunes_backup_type, check_itunes_backup_status, decrypt_itunes_backup
+from ..output import OutputParameters, logfunc, logdevinfo
+
+from scripts.lavafuncs import initialize_lava
 
 
 def crunch_artifacts(
-        plugins: typing.Sequence[plugin_loader.ArtifactSpec], extracttype, input_path, out_params, wrap_text,
-        loader: plugin_loader.ArtifactLoader, casedata, time_offset, profile_filename, itunes_backup_password=None, decryption_keys=None):
-    # start = process_time()
-    # start_wall = perf_counter()
+        leapp, plugins: typing.Sequence[artifact_loader.ArtifactSpec], extracttype, input_path,
+        custom_output_folder, output_path, wrap_text, loader: artifact_loader.ArtifactLoader, casedata,
+        profile_filename, itunes_backup_password=None, decryption_keys=None):
 
-    # logfunc('Processing started. Please wait. This may take a few minutes...')
+    start = process_time()
+    start_wall = perf_counter()
 
-    # logfunc('\n--------------------------------------------------------------------------------------')
-    # logfunc(f'iLEAPP v{leapp_version}: iOS Logs, Events, And Plists Parser')
-    # logfunc('Objective: Triage iOS Full File System and iTunes Backup Extractions.')
-    # logfunc('By: Alexis Brignoni | @AlexisBrignoni | abrignoni.com')
-    # logfunc('By: Yogesh Khatri   | @SwiftForensics | swiftforensics.com\n')
-    # logdevinfo()
-    # seeker = None
-    # password = itunes_backup_password
-    # try:
-    #     if extracttype == 'fs':
-    #         seeker = FileSeekerDir(input_path, out_params.data_folder)
+    out_params = OutputParameters(leapp, output_path, custom_output_folder)
+    context.Context.set_output_params(out_params)
 
-    #     elif extracttype == 'file':
-    #         seeker = FileSeekerFile(input_path, out_params.data_folder)
+    initialize_lava(input_path, out_params.output_folder_base, extracttype)
 
-    #     elif extracttype in ('tar', 'gz'):
-    #         seeker = FileSeekerTar(input_path, out_params.data_folder)
+    logfunc("Processing started. Please wait. This may take a few minutes...")
 
-    #     elif extracttype == 'zip':
-    #         seeker = FileSeekerZip(input_path, out_params.data_folder)
+    logfunc("\n--------------------------------------------------------------------------------------")
+    logfunc(f"{leapp.name} v{leapp.version}: {leapp.description}")
+    logfunc(f"Objective: {leapp.objective}")
+    logfunc("By: Alexis Brignoni | @AlexisBrignoni | abrignoni.com")
+    logfunc("By: Yogesh Khatri   | @SwiftForensics | swiftforensics.com\n")
+    logfunc()
+    logdevinfo()
+    seeker = None
+    password = itunes_backup_password
 
-    #     elif extracttype == 'itunes':
-    #         itunes_backup_type = get_itunes_backup_type(input_path)
-    #         if itunes_backup_type:
-    #             supported, encrypted, message = check_itunes_backup_status(
-    #                 input_path, itunes_backup_type)
-    #             if not supported:
-    #                 logfunc(message)
-    #                 return False
-    #             else:
-    #                 if encrypted:
-    #                     while not decryption_keys:
-    #                         if not password:
-    #                             password = getpass("iTunes Backup password: ")
-    #                         decryption_keys, _ = decrypt_itunes_backup(input_path, password)
-    #                         if not decryption_keys:
-    #                             return False
-    #         else:
-    #             logfunc('Input folder is not a valid iTunes backup!')
-    #             return False
-    #         seeker = FileSeekerItunes(input_path, out_params.data_folder,
-    #                                 itunes_backup_type, decryption_keys)
+    try:
+        if extracttype == "fs":
+            seeker = FileSeekerDir(input_path, out_params.data_folder)
 
-    #     else:
-    #         logfunc('Error on argument -o (input type)')
-    #         return False
-    # except Exception as ex:
-    #     logfunc('Had an exception in Seeker - see details below. Terminating Program!')
-    #     temp_file = io.StringIO()
-    #     traceback.print_exc(file=temp_file)
-    #     logfunc(temp_file.getvalue())
-    #     temp_file.close()
-    #     return False
+        elif extracttype == "file":
+            seeker = FileSeekerFile(input_path, out_params.data_folder)
+
+        elif extracttype in ("tar", "gz"):
+            seeker = FileSeekerTar(input_path, out_params.data_folder)
+
+        elif extracttype == "zip":
+            seeker = FileSeekerZip(input_path, out_params.data_folder)
+
+        elif extracttype == 'itunes':
+            itunes_backup_type = get_itunes_backup_type(input_path)
+            if itunes_backup_type:
+                supported, encrypted, message = check_itunes_backup_status(input_path, itunes_backup_type)
+                if not supported:
+                    logfunc(message)
+                    return False
+                else:
+                    if encrypted:
+                        while not decryption_keys:
+                            if not password:
+                                password = getpass("iTunes Backup password: ")
+                            decryption_keys, _ = decrypt_itunes_backup(input_path, password)
+                            if not decryption_keys:
+                                return False
+            else:
+                logfunc('Input folder is not a valid iTunes backup!')
+                return False
+            seeker = FileSeekerItunes(input_path, out_params.data_folder, itunes_backup_type, decryption_keys)
+
+        else:
+            logfunc('Error on argument -o (input type)')
+            return False
+    except Exception:
+        logfunc('Had an exception in Seeker - see details below. Terminating Program!')
+        temp_file = io.StringIO()
+        traceback.print_exc(file=temp_file)
+        logfunc(temp_file.getvalue())
+        temp_file.close()
+        return False
 
     # # Now ready to run
     # # add last_build at the start except for iTunes backups
@@ -225,6 +244,6 @@ def crunch_artifacts(
     # logfunc('Report generation Completed.')
     # logfunc('')
     # logfunc(f'Report location: {out_params.output_folder_base}')
+    # lava_finalize_output(out_params.output_folder_base)
 
     # return True
-    pass

@@ -6,12 +6,9 @@ import sys
 import argparse
 from pathlib import Path
 
-from leapps.functions import \
-    ArtifactLoader, Context, OutputParameters, \
+from leapps.functions import ArtifactLoader, \
     create_casedata, load_casedata, create_profile, load_profile, crunch_artifacts, save_content_to_txt_file, \
     ARTIFACT_PATHS, leapp
-
-from scripts.lavafuncs import initialize_lava, lava_finalize_output
 
 
 def validate_args(args):
@@ -52,11 +49,11 @@ def validate_args(args):
         if not Path(abs_input_path).iterdir():
             raise argparse.ArgumentError(
                 None, f"Input directory '{args.input_path}' is empty. Run the program again.")
-    elif args.t == "file":  # Single file input type
+    elif args.t == "tar" or args.t == "zip" or args.t == "gz" or args.t == "file":
         if not Path(abs_input_path).is_file():
             raise argparse.ArgumentError(
                 None, f"INPUT path '{args.input_path}' is not a file. "
-                "Type 'file' requires a single file input. Run the program again.")
+                f"Type '{args.t}' requires a file input. Run the program again.")
 
     if args.load_case_data and not Path(args.load_case_data).exists():
         raise argparse.ArgumentError(
@@ -120,7 +117,7 @@ def create_profile_casedata(file_path, artifacts):
 
 def main():
     """Parse command-line arguments and run requested actions."""
-    itunes_choice = ["itunes"] if leapp.name == "ileapp" else []
+    itunes_choice = ["itunes"] if leapp.name == "iLEAPP" else []
     itunes_help_message = "'itunes' for a folder containing a raw iTunes backup with hashed paths and names, "
 
     parser = argparse.ArgumentParser(description=f"{leapp.name} v{leapp.version}: "
@@ -165,10 +162,10 @@ def main():
 
     available_artifacts = []
     loader_paths = [ARTIFACT_PATHS]
-    
+
     if args.custom_artifacts_path:
         loader_paths.append(Path(args.custom_artifacts_path))
-    
+
     loader = ArtifactLoader(artifact_paths=loader_paths)
     for artifact in sorted(loader.artifacts, key=lambda p: p.category):
         if (artifact.module_name == 'iTunesBackupInfo'
@@ -176,7 +173,7 @@ def main():
                 or artifact.module_name == 'logarchive' and artifact.name != 'logarchive'):
             continue
         available_artifacts.append(artifact)
-    
+
     selected_artifacts = available_artifacts.copy()
     casedata = {}
 
@@ -214,15 +211,8 @@ def main():
         if output_path.drive:
             output_path = Path(r"\\?\\" + output_path.as_posix().replace('/', '\\'))
 
-    out_params = OutputParameters(leapp, output_path, custom_output_folder)
-    Context.set_output_params(out_params)
-
-    initialize_lava(input_path, out_params.output_folder_base, extracttype)
-
-    crunch_artifacts(selected_artifacts, extracttype, input_path, out_params, wrap_text, loader,
-                     casedata, args.load_profile, itunes_backup_password)
-
-    lava_finalize_output(out_params.output_folder_base)
+    crunch_artifacts(leapp, selected_artifacts, extracttype, input_path, custom_output_folder, output_path,
+                     wrap_text, loader, casedata, args.load_profile, itunes_backup_password)
 
 
 if __name__ == "__main__":

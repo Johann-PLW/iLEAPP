@@ -3,6 +3,7 @@
 import sys
 from datetime import datetime
 from pathlib import Path
+from leapps.functions.data_sources.text_files import append_content_to_txt_file
 
 
 class GuiWindow:
@@ -28,7 +29,6 @@ class OutputParameters:
         screen_output_file_path (Path | str): Path to the main screen output log.
     """
     # static parameters
-    nl = "\n"
     screen_output_file_path = ""
 
     def __init__(self, leapp, output_folder, custom_folder_name=None):
@@ -81,7 +81,6 @@ def redirect_logs_in_gui(log_text):
 
 def logfunc(message=""):
     """Write a message to GUI log, HTML screen log, and standard output.
-
     Args:
         message (str): Text to log.
     """
@@ -90,7 +89,16 @@ def logfunc(message=""):
         sys.stdout.write = redirect_logs_in_gui(log_text)
 
     if OutputParameters.screen_output_file_path:
-        with open(OutputParameters.screen_output_file_path, "a", encoding="utf8") as a:
-            a.write(message + "<br>" + OutputParameters.nl)
+        content = message + "<br>\n"
+        append_content_to_txt_file(OutputParameters.screen_output_file_path, content)
 
     print(message)
+
+
+def logdevinfo(message=""):
+    """Write a message to the device info HTML log.
+    Args:
+        message (str): Text to log.
+    """
+    content = message + "<br>\n"
+    append_content_to_txt_file(OutputParameters.screen_output_file_path_devinfo, content)
