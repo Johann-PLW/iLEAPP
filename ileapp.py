@@ -8,9 +8,8 @@ from pathlib import Path
 
 from leapps.functions import \
     ArtifactLoader, Context, OutputParameters, \
-    create_casedata, load_casedata, create_profile, load_profile, crunch_artifacts, \
+    create_casedata, load_casedata, create_profile, load_profile, crunch_artifacts, save_content_to_txt_file, \
     ARTIFACT_PATHS, leapp
-
 
 from scripts.lavafuncs import initialize_lava, lava_finalize_output
 
@@ -68,6 +67,57 @@ def validate_args(args):
             None, f"{leapp.name} profile file not found! Run the program again.")
 
 
+def generate_artifact_path_list(artifacts):
+    """Generate and save a sorted list of unique artifact search paths."""
+    print("Artifact path list generation started.\n")
+    path_list = set()
+    for artifact in artifacts:
+        if artifact.module_name == "logarchive":
+            continue
+        if isinstance(artifact.search, tuple):
+            for x in artifact.search:
+                path_list.add(x)
+        elif isinstance(artifact.search, str):
+            path_list.add(artifact.search)
+        else:
+            continue
+    filename = "path_list.txt"
+    for artifact_path in sorted(path_list):
+        print(artifact_path)
+    save_content_to_txt_file(filename, sorted(path_list))
+    print(f"\nArtifact path list generation completed and saved to '{filename}")
+
+
+def create_profile_casedata(file_path, artifacts):
+    """Interactively create a profile or case data file in the given directory."""
+    if Path(file_path).is_dir():
+        create_choice = ""
+        print("-" * 55)
+        print(f"Welcome to {leapp.name} Profile or Case Data file creation\n")
+        instructions = "You can type:\n"
+        instructions += f"   - '1' to create an {leapp.name} Profile file ({leapp.profile_extension})\n"
+        instructions += f"   - '2' to create a LEAPP Case Data file ({leapp.casedata_extension})\n"
+        instructions += "   - 'q' to quit\n"
+        while not create_choice:
+            print(instructions)
+            create_choice = input("Please enter your choice: ").lower()
+            print()
+            if create_choice == "1":
+                create_profile(leapp, artifacts, file_path)
+                create_choice = ""
+            elif create_choice == "2":
+                create_casedata(leapp, file_path)
+                create_choice = ""
+            elif create_choice == "q":
+                return
+            else:
+                print("Please enter a valid choice!!!\n")
+                create_choice = ""
+    else:
+        print(f"OUTPUT folder for storing f{leapp.name} Profile file does not exist!\n"
+              "Run the program again.")
+
+
 def main():
     """Parse command-line arguments and run requested actions."""
     itunes_choice = ["itunes"] if leapp.name == "ileapp" else []
@@ -115,8 +165,10 @@ def main():
 
     available_artifacts = []
     loader_paths = [ARTIFACT_PATHS]
+    
     if args.custom_artifacts_path:
         loader_paths.append(Path(args.custom_artifacts_path))
+    
     loader = ArtifactLoader(artifact_paths=loader_paths)
     for artifact in sorted(loader.artifacts, key=lambda p: p.category):
         if (artifact.module_name == 'iTunesBackupInfo'
@@ -124,6 +176,7 @@ def main():
                 or artifact.module_name == 'logarchive' and artifact.name != 'logarchive'):
             continue
         available_artifacts.append(artifact)
+    
     selected_artifacts = available_artifacts.copy()
     casedata = {}
 
@@ -133,53 +186,12 @@ def main():
         parser.error(str(e))
 
     if args.artifact_paths:
-        print("Artifact path list generation started.\n")
-        path_list = set()
-        for artifact in loader.artifacts:
-            if artifact.module_name == "logarchive":
-                continue
-            if isinstance(artifact.search, tuple):
-                for x in artifact.search:
-                    path_list.add(x)
-            elif isinstance(artifact.search, str):
-                path_list.add(artifact.search)
-            else:
-                continue
-        with open("path_list.txt", "w", encoding="utf-8") as paths:
-            for path in sorted(path_list):
-                paths.write(f"{path}\n")
-                print(path)
-        print("\nArtifact path list generation completed")
+        generate_artifact_path_list(loader.artifacts)
         return
 
     if args.create_profile_casedata:
-        if Path(args.create_profile_casedata).is_dir():
-            create_choice = ""
-            print("-" * 55)
-            print(f"Welcome to {leapp.name} Profile or Case Data file creation\n")
-            instructions = "You can type:\n"
-            instructions += f"   - '1' to create an {leapp.name} Profile file ({leapp.profile_extension})\n"
-            instructions += f"   - '2' to create a LEAPP Case Data file ({leapp.casedata_extension})\n"
-            instructions += "   - 'q' to quit\n"
-            while not create_choice:
-                print(instructions)
-                create_choice = input("Please enter your choice: ").lower()
-                print()
-                if create_choice == "1":
-                    create_profile(leapp, available_artifacts, args.create_profile_casedata)
-                    create_choice = ""
-                elif create_choice == "2":
-                    create_casedata(leapp, args.create_profile_casedata)
-                    create_choice = ""
-                elif create_choice == "q":
-                    return
-                else:
-                    print("Please enter a valid choice!!!\n")
-                    create_choice = ""
-        else:
-            print(f"OUTPUT folder for storing f{leapp.name} Profile file does not exist!\n"
-                  "Run the program again.")
-            return
+        create_profile_casedata(args.create_profile_casedata, available_artifacts)
+        return
 
     if args.load_case_data:
         casedata = load_casedata(args.load_case_data)
