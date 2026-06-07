@@ -6,7 +6,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from leapps.functions import ArtifactLoader, \
+from leapps.functions import ArtifactLoader, is_platform_windows, win_long_path, \
     create_casedata, load_casedata, create_profile, load_profile, crunch_artifacts, save_content_to_txt_file, \
     ARTIFACT_PATHS, leapp
 
@@ -49,7 +49,7 @@ def validate_args(args):
         if not Path(abs_input_path).iterdir():
             raise argparse.ArgumentError(
                 None, f"Input directory '{args.input_path}' is empty. Run the program again.")
-    elif args.t == "tar" or args.t == "zip" or args.t == "gz" or args.t == "file":
+    elif args.t in ("tar", "zip", "gz", "file"):
         if not Path(abs_input_path).is_file():
             raise argparse.ArgumentError(
                 None, f"INPUT path '{args.input_path}' is not a file. "
@@ -205,11 +205,10 @@ def main():
 
     # ios file system extractions contain paths > 260 char, which causes problems
     # This fixes the problem by prefixing \\?\ on each windows path.
-    if sys.platform == 'win32':
-        if input_path.drive and extracttype == 'fs':
-            input_path = Path(r"\\?\\" + input_path.as_posix().replace('/', '\\'))
-        if output_path.drive:
-            output_path = Path(r"\\?\\" + output_path.as_posix().replace('/', '\\'))
+    if is_platform_windows():
+        if extracttype == "fs":
+            input_path = win_long_path(input_path)
+        output_path = win_long_path(output_path)
 
     crunch_artifacts(leapp, selected_artifacts, extracttype, input_path, custom_output_folder, output_path,
                      wrap_text, loader, casedata, args.load_profile, itunes_backup_password)
