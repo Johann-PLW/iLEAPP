@@ -6,7 +6,7 @@ and convert a JSON file into namedtuples for easier access to its contents.
 
 import json
 from collections import namedtuple
-from leapps.functions.output import logfunc
+import leapps.functions.output as leapps
 
 
 def get_json_file_content(file_path):
@@ -21,19 +21,19 @@ def get_json_file_content(file_path):
         with open(file_path, "r", encoding="utf-8", errors='replace') as json_file:
             return json.load(json_file)
     except FileNotFoundError:
-        logfunc(f"Error: JSON file '{file_path}' not found.")
+        leapps.logfunc(f"Error: JSON file '{file_path}' not found.")
     except PermissionError:
-        logfunc(f"Error: Permission denied when trying to read '{file_path}'.")
+        leapps.logfunc(f"Error: Permission denied when trying to read '{file_path}'.")
     except IsADirectoryError:
-        logfunc(f"Error: Expected a file but found a directory at '{file_path}'.")
+        leapps.logfunc(f"Error: Expected a file but found a directory at '{file_path}'.")
     except OSError as e:
-        logfunc(f"Error: System error related to the file, disk, or path: {e}")
+        leapps.logfunc(f"Error: System error related to the file, disk, or path: {e}")
     except json.JSONDecodeError as e:
-        logfunc(f"Error: JSON file '{file_path}' malformed: {str(e)}")
+        leapps.logfunc(f"Error: JSON file '{file_path}' malformed: {str(e)}")
     except UnicodeDecodeError as e:
-        logfunc(f"Error: Encoding issue reading '{file_path}': {e}")
+        leapps.logfunc(f"Error: Encoding issue reading '{file_path}': {e}")
     except RecursionError as e:
-        logfunc(f"Error: JSON structure too deep to parse in '{file_path}': {e}")
+        leapps.logfunc(f"Error: JSON structure too deep to parse in '{file_path}': {e}")
     return {}
 
 
@@ -48,21 +48,21 @@ def save_content_to_json_file(file_path, data):
         with open(file_path, "w", encoding="utf-8") as json_file:
             json.dump(data, json_file)
     except FileNotFoundError:
-        logfunc(f"'{file_path}' does not exist or is not a invalid path.")
+        leapps.logfunc(f"'{file_path}' does not exist or is not a invalid path.")
     except PermissionError:
-        logfunc(f"Error: Permission denied when trying to write '{file_path}'.")
+        leapps.logfunc(f"Error: Permission denied when trying to write '{file_path}'.")
     except IsADirectoryError:
-        logfunc(f"Error: Expected a file but '{file_path}' is a directory.")
+        leapps.logfunc(f"Error: Expected a file but '{file_path}' is a directory.")
     except OSError as e:
-        logfunc(f"Error: System error related to the file, disk, or path: {e}")
+        leapps.logfunc(f"Error: System error related to the file, disk, or path: {e}")
     except UnicodeEncodeError as e:
-        logfunc(f"Error: Encoding issue writing '{file_path}': {e}")
+        leapps.logfunc(f"Error: Encoding issue writing '{file_path}': {e}")
     except TypeError as e:
-        logfunc(f"Error: Data provided is not JSON serializable: {e}")
+        leapps.logfunc(f"Error: Data provided is not JSON serializable: {e}")
     except ValueError as e:
-        logfunc(f"Error: Invalid data provided for JSON serialization: {e}")
+        leapps.logfunc(f"Error: Invalid data provided for JSON serialization: {e}")
     except RecursionError as e:
-        logfunc(f"Error: Data structure too deep for JSON serialization: {e}")
+        leapps.logfunc(f"Error: Data structure too deep for JSON serialization: {e}")
 
 
 def convert_json_file_to_namedtuple(json_file_path):
