@@ -96,9 +96,9 @@ def load_profile(leapp, profile_path, available_artifacts):
                 profile_load_error = "File is not a valid profile file: incorrect LEAPP or version"
                 print(profile_load_error)
                 return []
-            profile_plugins = set(profile.get("plugins", []))
+            profile_artifacts = set(profile.get("artifacts", []))
             return [selected_plugin for selected_plugin in available_artifacts
-                    if selected_plugin.name in profile_plugins]
+                    if selected_plugin.name in profile_artifacts]
         profile_load_error = "File was not a valid profile file: invalid format"
         print(profile_load_error)
         return []
