@@ -35,7 +35,9 @@ import re
 import datetime
 
 from scripts.version_info import leapp_name, leapp_version
-from scripts.context import Context
+# from scripts.context import Context
+from leapps.functions.artifacts.context import Context
+
 
 # Global variables
 lava_data = None

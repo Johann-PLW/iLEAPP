@@ -19,7 +19,8 @@ from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote
 import scripts.artifact_report as artifact_report
-from scripts.context import Context
+# from scripts.context import Context
+from leapps.functions.artifacts.context import Context
 
 # common third party imports
 import pytz
@@ -446,7 +447,7 @@ def get_data_list_with_media(media_header_info, data_list):
 
 def artifact_processor(func):
     @wraps(func)
-    def wrapper(files_found, report_folder, seeker, wrap_text, timezone_offset):
+    def wrapper(files_found, report_folder, seeker, wrap_text, timezone_offset=None):
         module_name = func.__module__.split('.')[-1]
         func_name = func.__name__
         module_file_path = inspect.getfile(func)
@@ -780,7 +781,7 @@ def does_view_exist_in_db(path, table_name):
 
 
 def tsv(report_folder, data_headers, data_list, tsvname, source_file=None):
-    report_folder = report_folder.rstrip('/')
+    report_folder = report_folder.as_posix().rstrip('/')
     report_folder = report_folder.rstrip('\\')
     report_folder_base = os.path.dirname(os.path.dirname(report_folder))
     tsv_report_folder = os.path.join(report_folder_base, '_TSV Exports')
@@ -798,7 +799,7 @@ def tsv(report_folder, data_headers, data_list, tsvname, source_file=None):
             tsv_writer.writerow(i)
             
 def timeline(report_folder, tlactivity, data_list, data_headers):
-    report_folder = report_folder.rstrip('/')
+    report_folder = report_folder.as_posix().rstrip('/')
     report_folder = report_folder.rstrip('\\')
     report_folder_base = os.path.dirname(os.path.dirname(report_folder))
     tl_report_folder = os.path.join(report_folder_base, '_Timeline')

@@ -18,8 +18,7 @@ __artifacts_v2__ = {
     }
 }
 
-from scripts.ilapfuncs import artifact_processor, get_plist_file_content, logfunc, \
-    device_info, iOS
+from scripts.ilapfuncs import artifact_processor, get_plist_file_content, logfunc, iOS
 
 
 @artifact_processor
@@ -38,14 +37,14 @@ def last_build(context):
             iOS.set_version(val)
             context.set_installed_os_version(val)
             logfunc(f"iOS version: {val}")
-            device_info("Device Information", "iOS version", val, data_source)
+            context.add_device_info("Device Information", "iOS version", val, data_source)
 
         if key == "ProductBuildVersion":
-            device_info("Device Information", "ProductBuildVersion", val, data_source)
+            context.add_device_info("Device Information", "ProductBuildVersion", val, data_source)
 
         if key == ("ProductName"):
             logfunc(f"Product: {val}")
-            device_info("Device Information", "Product Name", val, data_source)
+            context.add_device_info("Device Information", "Product Name", val, data_source)
 
     data_headers = ('Property', 'Property Value')
     return data_headers, data_list, data_source
