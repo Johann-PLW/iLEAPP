@@ -5,8 +5,6 @@ from datetime import datetime
 from pathlib import Path
 from leapps.functions.data_sources.text_files import append_content_to_txt_file
 
-identifiers = {}
-
 
 class GuiWindow:
     """Holds the GUI window handle when running with the Tkinter interface."""
@@ -106,13 +104,13 @@ def logdevinfo(message=""):
     append_content_to_txt_file(OutputParameters.screen_output_file_path_devinfo, content)
 
 
-def write_device_info():
-    """Write device information from identifiers to the device info HTML log.
-    Iterates through the identifiers dictionary and formats device information
+def write_device_info_file(device_info):
+    """Write device information to the device info HTML log.
+    Iterates through the device_info dictionary and formats device information
     into an HTML list structure with categories and sources.
     """
     devinfo_path = OutputParameters.screen_output_file_path_devinfo
-    for category, values in identifiers.items():
+    for category, values in device_info.items():
         append_content_to_txt_file(devinfo_path,
                                    "<b>--- <u>" + category + " </u>---</b><br>\n")
         append_content_to_txt_file(devinfo_path, "<ul>\n")
@@ -123,12 +121,11 @@ def write_device_info():
                                            "<li><b>" + label + ":</b><ul>\n")
                 for item in data:
                     append_content_to_txt_file(devinfo_path,
-                                               f'<li>{item["value"]} <span title="{item["source_file"]}" '
-                                               f'style="cursor:help"><i>(Source: {item["artifact"]})</i></span></li>\n')
+                                               f'<li>{item["value"]} <i>(Source: {item["source_file"]})</i></li>\n')
                 append_content_to_txt_file(devinfo_path, "</ul></li>\n")
             else:
                 # Handle single value
                 append_content_to_txt_file(devinfo_path,
-                                           f'<li><b>{label}:</b> {data["value"]} <span title="{data["source_file"]}" '
-                                           f'style="cursor:help"><i>(Source: {data["artifact"]})</i></span></li>\n')
+                                           f'<li><b>{label}:</b> {data["value"]} '
+                                           f'<i>(Source: {data["source_file"]})</i></li>\n')
         append_content_to_txt_file(devinfo_path, "</ul>\n")

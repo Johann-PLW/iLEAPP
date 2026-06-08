@@ -27,6 +27,7 @@ class Context:
     _data_folder = None
     _metadata = {}
     _installed_os_version = ""
+    _device_info = {}
 
     @staticmethod
     def set_output_params(output_params):
@@ -119,6 +120,37 @@ class Context:
         """
 
         Context._files_found = files_found
+
+    @staticmethod
+    def add_device_info(category, label, value, source_file=""):
+        """
+        Stores device information in the device_info dictionary
+        Args:
+            category (str): The category of the information (e.g., "Device Info", "User Info")
+            label (str): The label/description to use as the key
+            value (str): The actual value to store
+        """
+
+        stored_values = Context._device_info.get(category, {})
+
+        # Create value object with both the value and source module
+        value_obj = {
+            'value': value,
+            'source_file': Context.get_relative_path(source_file),
+        }
+
+        if label in stored_values:
+            # If the label exists, check if it's already a list
+            if isinstance(stored_values[label], list):
+                stored_values[label].append(value_obj)
+            else:
+                # Convert existing single value to list with both values
+                stored_values[label] = [stored_values[label], value_obj]
+        else:
+            # New label, store single value
+            stored_values[label] = value_obj
+
+        Context._device_info[category] = stored_values
 
     @staticmethod
     def get_metadata(collection):
@@ -414,12 +446,14 @@ class Context:
             str: The relative extraction path, or the original path if
                  the data_folder is not available.
         """
-        if not full_path or not Context._data_folder:
+        data_folder = Context.get_data_folder().as_posix() if Context.get_data_folder() else ""
+
+        if not full_path or not data_folder:
             return full_path
 
-        if full_path.startswith(Context._data_folder):
+        if full_path.startswith(data_folder):
             # Strip the base path and any leading separators
-            return full_path[len(Context._data_folder):].lstrip('/\\')
+            return full_path[len(data_folder):].lstrip('/\\')
 
         return full_path
 
@@ -476,6 +510,16 @@ class Context:
         """
 
         return Context._installed_os_version
+
+    @staticmethod
+    def get_device_info():
+        """
+        Retrieves the OS version of the installed device.
+        """
+        if not Context._device_info:
+            raise ValueError("Context not set. Device info not available.")
+
+        return Context._device_info
 
     @staticmethod
     def clear():

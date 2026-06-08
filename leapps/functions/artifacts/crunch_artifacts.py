@@ -11,7 +11,7 @@ from . import artifact_loader, context
 from ..data_sources import \
     FileSeekerDir, FileSeekerFile, FileSeekerTar, FileSeekerZip, FileSeekerItunes, \
     get_itunes_backup_type, check_itunes_backup_status, decrypt_itunes_backup
-from ..output import OutputParameters, GuiWindow, logfunc, logdevinfo
+from ..output import OutputParameters, GuiWindow, logfunc, logdevinfo, write_device_info_file
 from ..platform import is_platform_windows
 from scripts.lavafuncs import initialize_lava, lava_finalize_output, \
     lava_insert_sqlite_artifact_search_pattern, lava_insert_sqlite_file_path, \
@@ -224,7 +224,8 @@ def crunch_artifacts(
             GuiWindow.set_progress_bar(parsed_modules)
             proc_files_log.flush()
 
-    # write_device_info()
+    device_info = context.Context.get_device_info()
+    write_device_info_file(device_info)
     # if lava_only:
     #     write_lava_only_log()
     logfunc('')
