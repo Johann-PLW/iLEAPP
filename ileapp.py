@@ -6,7 +6,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from leapps.functions import ArtifactLoader, is_platform_windows, win_long_path, \
+from leapps.functions import ArtifactLoader, is_platform_windows, win_convert_to_long_path, \
     create_casedata, load_casedata, create_profile, load_profile, crunch_artifacts, save_content_to_txt_file, \
     ARTIFACT_PATHS, leapp
 
@@ -207,8 +207,8 @@ def main():
     # This fixes the problem by prefixing \\?\ on each windows path.
     if is_platform_windows():
         if extracttype == "fs":
-            input_path = win_long_path(input_path)
-        output_path = win_long_path(output_path)
+            input_path = win_convert_to_long_path(input_path)
+        output_path = win_convert_to_long_path(output_path)
 
     crunch_artifacts(leapp, selected_artifacts, extracttype, input_path, custom_output_folder, output_path,
                      wrap_text, loader, casedata, args.load_profile, itunes_backup_password)

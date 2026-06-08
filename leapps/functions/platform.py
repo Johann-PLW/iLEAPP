@@ -9,7 +9,7 @@ def is_platform_windows():
     return sys.platform == 'win32'
 
 
-def win_long_path(path):
+def win_convert_to_long_path(path):
     """If it has a driver letter, convert a Path object to a Windows long path
     format to support paths longer than 260 characters.
     Args:
