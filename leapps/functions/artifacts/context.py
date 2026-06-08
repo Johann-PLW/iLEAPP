@@ -514,10 +514,8 @@ class Context:
     @staticmethod
     def get_device_info():
         """
-        Retrieves the OS version of the installed device.
+        Retrieves the Device info collected from several artifacts.
         """
-        if not Context._device_info:
-            raise ValueError("Context not set. Device info not available.")
 
         return Context._device_info
 
