@@ -10,14 +10,14 @@ from shutil import copy2
 from . import artifact_loader, context
 from ..data_sources import \
     FileSeekerDir, FileSeekerFile, FileSeekerTar, FileSeekerZip, FileSeekerItunes, \
-    get_itunes_backup_type, check_itunes_backup_status, decrypt_itunes_backup
+    get_itunes_backup_type, check_itunes_backup_status, decrypt_itunes_backup, \
+    does_table_exist_in_db
 from ..output import OutputParameters, GuiWindow, logfunc, logdevinfo, write_device_info_file
 from ..platform import is_platform_windows
+
 from scripts.lavafuncs import initialize_lava, lava_finalize_output, \
     lava_insert_sqlite_artifact_search_pattern, lava_insert_sqlite_file_path, \
     lava_insert_sqlite_artifact_link_pattern_to_file
-
-from scripts.ilapfuncs import does_table_exist_in_db
 
 
 def crunch_artifacts(
@@ -237,7 +237,7 @@ def crunch_artifacts(
     logfunc(f"Processing time = {run_time_hms}")
     run_time_secs = end_wall - start_wall
     run_time_hms = strftime('%H:%M:%S', gmtime(run_time_secs))
-    logfunc(f"Processing time (wall)= {run_time_hms}")
+    logfunc(f"Processing time (wall) = {run_time_hms}")
 
     logfunc('')
     logfunc('Report generation started.')
