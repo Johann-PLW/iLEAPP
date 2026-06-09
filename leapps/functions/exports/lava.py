@@ -28,22 +28,46 @@ Functions:
 import json
 import sqlite3
 import sys
-import os
-from platform import platform
-from collections import OrderedDict
 import re
 import datetime
 
-from scripts.version_info import leapp_name, leapp_version
-# from scripts.context import Context
+from pathlib import Path
+from platform import platform
+from collections import OrderedDict
+
 from leapps.functions.artifacts.context import Context
+from leapps.functions.data_sources.json_files import save_content_to_json_file
 
 
-# Global variables
-lava_data = None
-lava_db = None
-lava_db_name = '_lava_artifacts.db'
-lava_json_name = '_lava_data.lava'
+class LAVA:
+    """Container for shared LAVA SQLite connector resource."""
+
+    _lava_db = None
+
+    @staticmethod
+    def set_db_connect(output_params):
+        """
+        Sets the shared LAVA SQLite database connection.
+        Args:
+            output_params: The SQLite database connection or output parameters
+                to be stored as the shared LAVA database connector.
+        """
+
+        LAVA._lava_db = output_params
+        print(LAVA._lava_db)
+
+    @staticmethod
+    def db_connect():
+        """
+        Returns the shared LAVA SQLite database connection.
+        """
+
+        return LAVA._lava_db
+
+
+LAVA_DB_NAME = '_lava_artifacts.db'
+LAVA_JSON_NAME = '_lava_data.lava'
+lava_data = {}
 
 
 def sanitize_sql_name(name):
@@ -85,7 +109,7 @@ def get_sql_type(python_type):
     return type_map.get(python_type, 'TEXT')
 
 
-def initialize_lava(input_path, output_path, input_type):
+def initialize_lava(leapp, input_path, output_path, input_type):
     '''
     Initialize the LAVA data.
     Args:
@@ -95,13 +119,11 @@ def initialize_lava(input_path, output_path, input_type):
         selected_artifacts: List of selected artifacts.
     '''
 
-    global lava_data, lava_db
-
-    lava_data = {
+    lava_data.update({
         "parser_info": {
-            "leapp_name": leapp_name,
-            "leapp_version": leapp_version,
-            "leapp_mode": "GUI" if "leappGUI" in sys.argv[0] else "CLI", 
+            "leapp_name": leapp.name,
+            "leapp_version": leapp.version,
+            "leapp_mode": "GUI" if "leappGUI" in sys.argv[0] else "CLI",
             "package": "Source code" if not getattr(sys, 'frozen', False) else "Binary",
             "OS": platform(),
             "start_timestamp": int(datetime.datetime.now(datetime.timezone.utc).timestamp())
@@ -110,18 +132,18 @@ def initialize_lava(input_path, output_path, input_type):
         "param_output": output_path.as_posix(),
         "param_type": input_type,
         "processing_status": "In Progress",
-        "lava_db_name": lava_db_name,
+        "lava_db_name": LAVA_DB_NAME,
         "modules": [],
         "artifacts": OrderedDict(),
         "meta": {
             "modules": []
         }
-    }
+    })
 
-    db_path = os.path.join(output_path, lava_db_name)
-    lava_db = sqlite3.connect(db_path)
+    db_path = Path(output_path.joinpath(LAVA_DB_NAME))
+    LAVA.set_db_connect(sqlite3.connect(db_path))
 
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
     cursor.execute('''CREATE TABLE _artifact_search_patterns (
                         id INTEGER PRIMARY KEY,
                         module_name TEXT NOT NULL,
@@ -194,7 +216,6 @@ def lava_process_artifact(
         artifact_icon: The icon of the artifact.
         source_path: The source path of the artifact.
     '''
-    global lava_data
 
     if category not in lava_data["artifacts"]:
         lava_data["artifacts"][category] = []
@@ -212,7 +233,7 @@ def lava_process_artifact(
     if not module_info:
         module_info = {
             "module_name": module_name,
-            "module_filename": os.path.basename(Context.get_module_file_path()),
+            "module_filename": Path(Context.get_module_file_path()).name,
             "artifacts": []
         }
         lava_data['meta']['modules'].append(module_info)
@@ -302,8 +323,6 @@ def lava_add_module(module_name, module_status, file_count=None):
         lava_data (dict): A global dictionary that contains a list of modules under the key 'modules'.
     """
 
-    global lava_data
-
     module = {
         "module_name": module_name,
         "module_status": module_status
@@ -329,13 +348,12 @@ def lava_create_sqlite_table(table_name, data):
     Raises:
         Exception: If there is an error during the table creation process.
     """
-    global lava_db
 
     if not data:
         return None, None, None
 
     sanitized_table_name = sanitize_sql_name(table_name)
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
 
     columns = []
     column_map = {}
@@ -357,7 +375,7 @@ def lava_create_sqlite_table(table_name, data):
 
     columns_sql = ', '.join(columns)
     cursor.execute(f"CREATE TABLE IF NOT EXISTS {sanitized_table_name} ({columns_sql})")
-    lava_db.commit()
+    LAVA.db_connect().commit()
 
     return sanitized_table_name, column_map, object_columns
 
@@ -380,12 +398,10 @@ def lava_insert_sqlite_data(table_name, data, object_columns, headers, column_ma
         None
     """
 
-    global lava_db
-
     if not data:
         return
 
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
 
     # Use the sanitized column names directly
     sanitized_columns = [sanitize_sql_name(h[0] if isinstance(h, tuple) else h) for h in headers]
@@ -419,7 +435,7 @@ def lava_insert_sqlite_data(table_name, data, object_columns, headers, column_ma
 
     # Execute the insert
     cursor.executemany(query, rows_to_insert)
-    lava_db.commit()
+    LAVA.db_connect().commit()
 
 
 def lava_get_media_item(media_id):
@@ -431,8 +447,7 @@ def lava_get_media_item(media_id):
         sqlite3.Row or None: A row object containing all columns from the _lava_media_items table
     """
 
-    global lava_db
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
     query = f"SELECT * FROM _lava_media_items WHERE id='{media_id}'"
     return cursor.execute(query).fetchone()
     # return result.fetchone()
@@ -454,8 +469,7 @@ def lava_insert_sqlite_media_item(media_item):
         None
     """
 
-    global lava_db
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
     sql = '''INSERT INTO _lava_media_items
                 ("id", "source_path", "extraction_path", "type", "metadata", "created_at", "updated_at", "is_embedded")
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)'''
@@ -473,7 +487,7 @@ def lava_insert_sqlite_media_item(media_item):
 
     try:
         cursor.execute(sql, params)
-        lava_db.commit()
+        LAVA.db_connect().commit()
     except sqlite3.IntegrityError as e:
         print(str(e))
 
@@ -487,8 +501,7 @@ def lava_get_media_references(media_ref):
         tuple or None: A tuple containing the row data if found, None otherwise.
     """
 
-    global lava_db
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
     query = f"SELECT * FROM _lava_media_references WHERE id='{media_ref}'"
     return cursor.execute(query).fetchone()
 
@@ -508,8 +521,7 @@ def lava_insert_sqlite_media_references(media_references):
         None
     """
 
-    global lava_db
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
     sql = '''INSERT INTO _lava_media_references
                 ("id", "media_item_id", "module_name", "artifact_name", "name")
                 VALUES (?, ?, ?, ?, ?)'''
@@ -522,7 +534,7 @@ def lava_insert_sqlite_media_references(media_references):
         media_references.name
     )
     cursor.execute(sql, params)
-    lava_db.commit()
+    LAVA.db_connect().commit()
 
 
 def lava_get_full_media_info(media_ref_id):
@@ -538,9 +550,8 @@ def lava_get_full_media_info(media_ref_id):
                             None if no matching media_ref_id exists in the database.
     """
 
-    global lava_db
-    lava_db.row_factory = sqlite3.Row
-    cursor = lava_db.cursor()
+    LAVA.db_connect().row_factory = sqlite3.Row
+    cursor = LAVA.db_connect().cursor()
     query = f'''
     SELECT *
     FROM _lava_media_info
@@ -559,8 +570,7 @@ def lava_insert_sqlite_artifact_search_pattern(artifact_regex_id, module_name, a
         regex (str): The regular expression for the artifact search pattern.
     """
 
-    global lava_db
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
     sql = '''INSERT INTO _artifact_search_patterns
                 ("id", "module_name", "artifact_name", "regex")
                 VALUES (?, ?, ?, ?)'''
@@ -569,7 +579,7 @@ def lava_insert_sqlite_artifact_search_pattern(artifact_regex_id, module_name, a
 
     try:
         cursor.execute(sql, data)
-        lava_db.commit()
+        LAVA.db_connect().commit()
     except sqlite3.IntegrityError as e:
         print(str(e))
 
@@ -582,8 +592,7 @@ def lava_insert_sqlite_file_path(file_id, file_path):
         file_path (str): Relative file path to store.
     """
 
-    global lava_db
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
     sql = '''INSERT INTO _file_path_list
                 ("id", "file_path")
                 VALUES (?, ?)'''
@@ -592,7 +601,7 @@ def lava_insert_sqlite_file_path(file_id, file_path):
 
     try:
         cursor.execute(sql, data)
-        lava_db.commit()
+        LAVA.db_connect().commit()
     except sqlite3.IntegrityError as e:
         print(str(e))
 
@@ -605,8 +614,7 @@ def lava_insert_sqlite_artifact_link_pattern_to_file(artifact_regex_id, file_id)
         file_id (int): ID of the related file path entry.
     """
 
-    global lava_db
-    cursor = lava_db.cursor()
+    cursor = LAVA.db_connect().cursor()
     sql = '''INSERT INTO _artifact_pattern_to_file
                 ("artifact_search_pattern_id", "file_path_id")
                 VALUES (?, ?)'''
@@ -615,7 +623,7 @@ def lava_insert_sqlite_artifact_link_pattern_to_file(artifact_regex_id, file_id)
 
     try:
         cursor.execute(sql, data)
-        lava_db.commit()
+        LAVA.db_connect().commit()
     except sqlite3.IntegrityError as e:
         print(str(e))
 
@@ -639,8 +647,6 @@ def lava_finalize_output(output_path):
         lava_json_name (str): The filename for the LAVA JSON output file
     """
 
-    global lava_data, lava_db
-
     lava_data["processing_status"] = "Complete"
 
     # Sort modules alphabetically
@@ -656,8 +662,7 @@ def lava_finalize_output(output_path):
     lava_data["parser_info"]["end_timestamp"] = int(datetime.datetime.now(datetime.timezone.utc).timestamp())
 
     # Save LAVA JSON output
-    with open(os.path.join(output_path, lava_json_name), 'w', encoding='utf-8') as f:
-        json.dump(lava_data, f, indent=4)
+    save_content_to_json_file(Path(output_path).joinpath(LAVA_JSON_NAME), lava_data)
 
     # Close the SQLite database
-    lava_db.close()
+    LAVA.db_connect().close()

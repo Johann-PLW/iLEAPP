@@ -46,7 +46,7 @@ def save_content_to_json_file(file_path, data):
     """
     try:
         with open(file_path, "w", encoding="utf-8") as json_file:
-            json.dump(data, json_file)
+            json.dump(data, json_file, indent=4)
     except FileNotFoundError:
         leapps.logfunc(f"'{file_path}' does not exist or is not a invalid path.")
     except PermissionError:

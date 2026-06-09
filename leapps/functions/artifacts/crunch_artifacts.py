@@ -12,12 +12,11 @@ from ..data_sources import \
     FileSeekerDir, FileSeekerFile, FileSeekerTar, FileSeekerZip, FileSeekerItunes, \
     get_itunes_backup_type, check_itunes_backup_status, decrypt_itunes_backup, \
     does_table_exist_in_db
-from ..output import OutputParameters, GuiWindow, logfunc, logdevinfo, write_device_info_file
-from ..platform import is_platform_windows
-
-from scripts.lavafuncs import initialize_lava, lava_finalize_output, \
+from ..exports.lava import initialize_lava, lava_finalize_output, \
     lava_insert_sqlite_artifact_search_pattern, lava_insert_sqlite_file_path, \
     lava_insert_sqlite_artifact_link_pattern_to_file
+from ..output import OutputParameters, GuiWindow, logfunc, logdevinfo, write_device_info_file
+from ..platform import is_platform_windows
 
 
 def crunch_artifacts(
@@ -31,7 +30,7 @@ def crunch_artifacts(
     out_params = OutputParameters(leapp, output_path, custom_output_folder)
     context.Context.set_output_params(out_params)
 
-    initialize_lava(input_path, out_params.output_folder_base, extracttype)
+    initialize_lava(leapp, input_path, out_params.output_folder_base, extracttype)
 
     logfunc("Processing started. Please wait. This may take a few minutes...")
 
