@@ -35,8 +35,8 @@ from pathlib import Path
 from platform import platform
 from collections import OrderedDict
 
-from leapps.functions.artifacts.context import Context
-from leapps.functions.data_sources.json_files import save_content_to_json_file
+from leapp_functions.artifacts.context import Context
+from leapp_functions.data_sources.json_files import save_content_to_json_file
 
 
 class LAVA:

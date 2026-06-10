@@ -6,7 +6,7 @@ and convert a JSON file into namedtuples for easier access to its contents.
 
 import json
 from collections import namedtuple
-import leapps.functions.output as leapps
+import leapp_functions.output as leapps
 
 
 def get_json_file_content(file_path):

@@ -20,7 +20,7 @@ from pathlib import Path
 from urllib.parse import quote
 import scripts.artifact_report as artifact_report
 # from scripts.context import Context
-from leapps.functions.artifacts.context import Context
+from leapp_functions.artifacts.context import Context
 
 # common third party imports
 import pytz
@@ -35,7 +35,7 @@ from PIL import Image
 # from scripts.lavafuncs import lava_process_artifact, lava_insert_sqlite_data, lava_get_media_item, \
 #     lava_insert_sqlite_media_item, lava_insert_sqlite_media_references, lava_get_media_references, \
 #     lava_get_full_media_info
-from leapps.functions.exports.lava import lava_process_artifact, lava_insert_sqlite_data, lava_get_media_item, \
+from leapp_functions.exports.lava import lava_process_artifact, lava_insert_sqlite_data, lava_get_media_item, \
     lava_insert_sqlite_media_item, lava_insert_sqlite_media_references, lava_get_media_references, \
     lava_get_full_media_info
 

@@ -24,4 +24,4 @@ __all__ += ["OutputParameters", "logfunc", "logdevinfo"]
 __all__ += ["is_platform_windows", "win_convert_to_long_path"]
 __all__ += ["create_casedata", "load_casedata"]
 
-leapp = convert_json_file_to_namedtuple("leapps/settings.json")
+leapp = convert_json_file_to_namedtuple("scripts/data/leapp_config.json")

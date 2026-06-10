@@ -21,8 +21,7 @@ import importlib.util
 
 # Resolved relative to this file's location for PyInstaller compatibility.
 ARTIFACT_PATHS = pathlib.Path(__file__) \
-    .resolve().parent.resolve().parent.resolve().parent.resolve().parent \
-    .joinpath("scripts", "artifacts")
+    .resolve().parent.resolve().parent.resolve().parent .joinpath("scripts", "artifacts")
 
 
 @dataclasses.dataclass(frozen=True)

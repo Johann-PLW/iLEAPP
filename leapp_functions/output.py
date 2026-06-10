@@ -3,7 +3,7 @@
 import sys
 from datetime import datetime
 from pathlib import Path
-from leapps.functions.data_sources.text_files import append_content_to_txt_file
+from leapp_functions.data_sources.text_files import append_content_to_txt_file
 
 
 class GuiWindow:

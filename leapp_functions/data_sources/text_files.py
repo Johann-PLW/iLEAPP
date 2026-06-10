@@ -3,7 +3,7 @@ Text file data source for Leapp.
 This module provides functionality to load and save text files.
 """
 
-import leapps.functions.output as leapps
+import leapp_functions.output as leapps
 
 
 def get_txt_file_content(file_path):

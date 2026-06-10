@@ -1,7 +1,7 @@
 """Create and load LEAPP case data files."""
 
 from pathlib import Path
-from leapps.functions.data_sources.json_files import save_content_to_json_file, get_json_file_content
+from leapp_functions.data_sources.json_files import save_content_to_json_file, get_json_file_content
 
 
 def create_casedata(leapp, path):

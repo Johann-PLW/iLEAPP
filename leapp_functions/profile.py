@@ -1,7 +1,7 @@
 """Profile creation and loading helpers for LEAPP artifact selection."""
 
 from pathlib import Path
-from leapps.functions.data_sources.json_files import get_json_file_content, save_content_to_json_file
+from leapp_functions.data_sources.json_files import get_json_file_content, save_content_to_json_file
 
 
 def create_profile(leapp, artifacts, path):

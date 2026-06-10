@@ -6,7 +6,7 @@ import sys
 import argparse
 from pathlib import Path
 
-from leapps.functions import ArtifactLoader, is_platform_windows, win_convert_to_long_path, \
+from leapp_functions import ArtifactLoader, is_platform_windows, win_convert_to_long_path, \
     create_casedata, load_casedata, create_profile, load_profile, crunch_artifacts, save_content_to_txt_file, \
     ARTIFACT_PATHS, leapp
 
