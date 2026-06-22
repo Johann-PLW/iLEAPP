@@ -17,6 +17,9 @@ from ..exports.lava import initialize_lava, lava_finalize_output, \
     lava_insert_sqlite_artifact_link_pattern_to_file
 from ..output import OutputParameters, GuiWindow, logfunc, logdevinfo, write_device_info_file
 from ..platform import is_platform_windows
+from ..exports import report
+
+from scripts.ilapfuncs import icons
 
 
 def crunch_artifacts(
@@ -148,9 +151,9 @@ def crunch_artifacts(
             else:
                 search_regexes = [artifact.search]
             files_found = []
-            proc_files_log.write(f"<b>For {artifact.name} module</b>")
+            proc_files_log.write(f"<b>For {artifact.name} artifact</b>")
             if search_regexes is None:
-                proc_files_log.write(f"<ul><li>No search regexes provided for {artifact.name} module.")
+                proc_files_log.write(f"<ul><li>No search regexes provided for {artifact.name} artifact.")
                 proc_files_log.write("<ul><li><i>'_lava_artifacts.db'</i> used as source file.</li></ul></li></ul>")
                 files_found = [Path(out_params.output_folder_base).joinpath("_lava_artifacts.db")]
             else:
@@ -247,8 +250,8 @@ def crunch_artifacts(
         if input_path.startswith('\\\\?\\'):
             input_path = input_path[4:]
 
-    # report.generate_report(out_params.output_folder_base, run_time_secs, run_time_hms,
-    #                        extracttype, input_path, casedata, profile_filename, icons, lava_only)
+    report.generate_report(leapp, out_params.output_folder_base, run_time_secs, run_time_hms,
+                           extracttype, input_path, casedata, profile_filename, icons, lava_only)
     logfunc('Report generation Completed.')
     logfunc('')
     logfunc(f'Report location: {out_params.output_folder_base}')

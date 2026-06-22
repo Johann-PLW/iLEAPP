@@ -6,19 +6,24 @@ This module provides functionality to load and save text files.
 import leapp_functions.output as leapps
 
 
-def get_txt_file_content(file_path):
+def get_txt_file_content(file_path, line_by_line=False):
     """
     Load a text file and return its content.
     Args:
         file_path (str|Path): The path to the text file.
+        line_by_line (bool): If True, return a list of lines;
+            otherwise, return the entire content as a single string.
     Returns:
-        list: The content of the text file as a list (one line --> one list item)
-        If an error occurs, an empty list is returned.
+        list or str: The content of the text file.
+        If an error occurs, an empty list or string is returned.
 
     """
     try:
         with open(file_path, "r", encoding="utf-8") as txt_file:
-            return txt_file.readlines()
+            if line_by_line:
+                return txt_file.readlines()
+            else:
+                return txt_file.read()
     except FileNotFoundError:
         leapps.logfunc(f"Error: File '{file_path}' not found.")
     except PermissionError:
@@ -37,12 +42,15 @@ def save_content_to_txt_file(file_path, data):
     Save data to a text file.
     Args:
         file_path (str|Path): The path to the text file.
-        data (list): The list to save (one list item --> one line).
+        data (list or str): The content to save. If a list, each item will be written as a separate line.
     """
     try:
         with open(file_path, "w", encoding="utf-8") as txt_file:
-            for item in data:
-                txt_file.write(f"{item}\n")
+            if isinstance(data, list):
+                for item in data:
+                    txt_file.write(f"{item}\n")
+            else:
+                txt_file.write(data)
     except FileNotFoundError:
         leapps.logfunc(f"'{file_path}' does not exist or is not a invalid path.")
     except PermissionError:

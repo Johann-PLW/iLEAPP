@@ -18,7 +18,8 @@ from datetime import *
 from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote
-import scripts.artifact_report as artifact_report
+# import scripts.artifact_report as artifact_report
+import leapp_functions.exports.artifact_report as artifact_report
 # from scripts.context import Context
 from leapp_functions.artifacts.context import Context
 
@@ -709,7 +710,7 @@ def get_sqlite_db_records(path, query, attach_query=None):
             cursor.execute(query)
             records = cursor.fetchall()
             return records
-        except sqlite3.OperationalError as e:
+        except sqlite3.DatabaseError as e:
             logfunc(f"Error with {path}:")
             logfunc(f" - {str(e)}")
         except sqlite3.ProgrammingError as e:
@@ -1154,7 +1155,7 @@ def convert_unix_ts_to_utc(ts):
     if ts:
         try:
             ts = float(ts)
-        except ValueError:
+        except (ValueError, TypeError, OSError, OverflowError):
             return ts
         ts = convert_unix_ts_in_seconds(ts)
         return datetime.fromtimestamp(ts, tz=timezone.utc)
