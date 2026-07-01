@@ -1,9 +1,13 @@
 import html
 import os
 import sys
-from .html_parts import *
-#from scripts.ilapfuncs import is_platform_windows
-from scripts.version_info import leapp_version
+
+from leapp_functions.exports.html_parts import (page_header, body_start, body_sidebar_setup,
+                                                body_sidebar_dynamic_data_placeholder, body_sidebar_trailer,
+                                                body_main_header, body_main_data_title, body_spinner,
+                                                body_main_trailer, body_end, page_footer,
+                                                default_responsive_table_script, nav_bar_script_footer)
+from leapp_functions.data_sources.json_files import convert_json_file_to_namedtuple
 
 class ArtifactHtmlReport:
 
@@ -12,7 +16,8 @@ class ArtifactHtmlReport:
         self.report_file_path = ''
         self.script_code = ''
         self.artifact_name = artifact_name
-        self.artifact_category = artifact_category # unused
+        self.artifact_category = artifact_category  # unused
+        self.leapp = convert_json_file_to_namedtuple("scripts/data/leapp_config.json")
 
     def __del__(self):
         if self.report_file:
@@ -22,15 +27,15 @@ class ArtifactHtmlReport:
         '''Creates the report HTML file and writes the artifact name as a heading'''
         # artifact_file_name =  artifact_file_name.replace(" ", "_") # Replace " " with "_" in HTML filenames
         self.report_file = open(os.path.join(report_folder, f'{artifact_file_name}.temphtml'), 'w', encoding='utf8')
-        self.report_file.write(page_header.format(f'iLEAPP - {self.artifact_name} report'))
-        self.report_file.write(body_start.format(f'iLEAPP {leapp_version}'))
+        self.report_file.write(page_header.format(f'{self.leapp.name} - {self.artifact_name} report'))
+        self.report_file.write(body_start.format(f'{self.leapp.name} {self.leapp.version}'))
         self.report_file.write(body_sidebar_setup)
-        self.report_file.write(body_sidebar_dynamic_data_placeholder) # placeholder for sidebar data
+        self.report_file.write(body_sidebar_dynamic_data_placeholder)  # placeholder for sidebar data
         self.report_file.write(body_sidebar_trailer)
         self.report_file.write(body_main_header)
         self.report_file.write(body_main_data_title.format(f'{self.artifact_name} report', artifact_description))
-        self.report_file.write(body_spinner) # Spinner till data finishes loading
-        #self.report_file.write(body_infinite_loading_bar) # Not working!
+        self.report_file.write(body_spinner)  # Spinner till data finishes loading
+        # self.report_file.write(body_infinite_loading_bar) # Not working!
 
     def add_script(self, script=''):
         '''Adds a default script or the script supplied'''
@@ -78,7 +83,7 @@ class ArtifactHtmlReport:
 
             html_no_escape  : if html_escape=True, list of columns not to escape
         '''
-        if (not self.report_file):
+        if not self.report_file:
             raise ValueError('Output report file is closed/unavailable!')
 
         num_entries = len(data_list)
@@ -115,8 +120,11 @@ class ArtifactHtmlReport:
                          row)) + '</tr>')
         else:
             for row in data_list:
-                self.report_file.write('<tr>' + ''.join( ('<td>{}</td>'.format(str(x) if x not in [None, 'N/A'] else '') for x in row) ) + '</tr>')
-        
+                self.report_file.write(
+                    '<tr>' +
+                    ''.join(('<td>{}</td>'.format(str(x) if x not in [None, 'N/A'] else '') for x in row)) +
+                    '</tr>')
+
         self.report_file.write('</tbody>')
         if cols_repeated_at_bottom:
             self.report_file.write('<tfoot><tr>' + ''.join(
@@ -127,9 +135,10 @@ class ArtifactHtmlReport:
 
     def add_section_heading(self, heading, size='h2'):
         heading = html.escape(heading)
-        data = '<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">' \
-               '    <{0} class="{0}">{1}</{0}>' \
-               '</div>'
+        data = '<div class="d-flex justify-content-between flex-wrap flex-md-nowrap '\
+            'align-items-center pt-3 pb-2 mb-3 border-bottom">' \
+            '    <{0} class="{0}">{1}</{0}>' \
+            '</div>'
         self.report_file.write(data.format(size, heading))
 
     def write_minor_header(self, heading, heading_tag=''):
@@ -150,5 +159,3 @@ class ArtifactHtmlReport:
             self.report_file.write(body_main_trailer + body_end + self.script_code + page_footer)
             self.report_file.close()
             self.report_file = None
-
-        

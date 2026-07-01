@@ -28,14 +28,6 @@
     border-left-color: rgb(222, 226, 230);
 }
 
-[data-theme="dark"] .sidebar .nav-link {
-    color: #999;
-}
-
-[data-theme="dark"] .sidebar .nav-link.active {
-    color: #007bff;
-}
-
 [data-theme="dark"] .table {
     color: #bdbdbd;
 }
