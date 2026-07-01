@@ -19,15 +19,15 @@ from scripts.ilapfuncs import logfunc
 
 
 def get_tabler_icon_names():
-    """Returns a set of available tabler icon names by scanning the tabler_icons/outline directory."""
-    for _, dirs, files in Path.cwd().joinpath("assets/tabler_icons/outline").walk():
+    """Returns a set of available tabler icon names by scanning the tabler_icons directory."""
+    for _, dirs, files in Path.cwd().joinpath("assets/tabler_icons").walk():
         if '__pycache__' in dirs:
             dirs.remove('__pycache__')
         return set(file.replace('.svg', '') for file in files if file.endswith('.svg'))
 
 
 def get_tabler_icon(icon_name):
-    return get_txt_file_content(Path.cwd().joinpath("assets/tabler_icons/outline", f"{icon_name}.svg"))
+    return get_txt_file_content(Path.cwd().joinpath("assets/tabler_icons", f"{icon_name}.svg"))
 
 
 def generate_report(leapp, reportfolderbase, time_in_secs, time_hms, extraction_type,
