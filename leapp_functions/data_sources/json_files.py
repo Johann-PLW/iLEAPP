@@ -1,10 +1,11 @@
 """
-JSON file data source for Leapp.
+JSON file data source for LEAPPs.
 This module provides functionality to load and save JSON files,
 and convert a JSON file into namedtuples for easier access to its contents.
 """
 
 import json
+from collections import namedtuple
 
 
 def get_json_file_content(file_path):
@@ -33,3 +34,16 @@ def get_json_file_content(file_path):
     except RecursionError as e:
         print(f"Error: JSON structure too deep to parse in '{file_path}': {e}")
     return {}
+
+
+def convert_json_file_to_namedtuple(json_file_path):
+    """Load a JSON file and recursively convert dictionaries to namedtuples."""
+    json_data = get_json_file_content(json_file_path)
+
+    def convert(dictionary):
+        for key, value in dictionary.items():
+            if isinstance(value, dict):
+                dictionary[key] = convert(value)
+        return namedtuple('GenericDict', dictionary.keys())(**dictionary)
+
+    return convert(json_data)
