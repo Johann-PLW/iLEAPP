@@ -7,11 +7,13 @@
   "profile_extension": ".ilprofile",
   "casedata_extension": ".lcasedata",
   "theme": {
-    "brand": {
-    },
     "dark": {
+      "banner_bg": "#FC3E69",
+      "main_bg": "#0E0F13"
     },
     "light": {
+      "banner_bg": "#FC3E69",
+      "main_bg": "#FAF7F1"
     }
   }
 }

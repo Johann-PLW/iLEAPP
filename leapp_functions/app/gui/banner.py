@@ -3,9 +3,10 @@
 import tkinter as tk
 
 
-class Header(tk.Frame):
+class Banner(tk.Frame):
     """ Banner of the main window """
     def __init__(self, parent, app):
-        super().__init__(parent, bg="#FC3E69", height=60)
+        colors = self.colors = app.colors
+        super().__init__(parent, bg=colors.banner_bg, height=60)
         screen = app.screen
         print(screen)

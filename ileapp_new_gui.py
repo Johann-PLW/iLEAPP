@@ -4,8 +4,9 @@ The new LEAPPs GUI --> Work in progress.
 
 import tkinter as tk
 
-from leapp_functions.app.gui.header import Header
 from leapp_functions import leapp
+from leapp_functions.app.gui import themes
+from leapp_functions.app.gui.banner import Banner
 
 
 class MainWindow(tk.Tk):
@@ -16,7 +17,9 @@ class MainWindow(tk.Tk):
         self.title(f"{leapp.name} version {leapp.version}")
         self.minsize(900, 700)
 
-        self.header = None
+        self.appearance = themes.Appearance(leapp.theme)
+
+        self.banner = None
         self.page = None
         self.steps = None
         self.screen = None
@@ -24,14 +27,19 @@ class MainWindow(tk.Tk):
 
         self.build()
 
+    @property
+    def colors(self):
+        """The palette in use"""
+        return self.appearance.colors
+
     def build(self):
         """ Build or replace every widget using the current palette """
-        for widget in (self.header, self.page):
+        for widget in (self.banner, self.page):
             if widget is not None:
                 widget.destroy()
-        self.configure(bg="#0E0F13")
-        self.header = Header(self, self)
-        self.header.pack(fill="x")
+        self.configure(bg=self.colors.main_bg)
+        self.banner = Banner(self, self)
+        self.banner.pack(fill="x")
 
 
 if __name__ == "__main__":
