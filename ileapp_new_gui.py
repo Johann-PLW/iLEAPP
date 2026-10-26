@@ -8,7 +8,9 @@ from tkinter import messagebox
 
 from leapp_functions import leapp
 from leapp_functions.app.gui import themes, images
+from leapp_functions.app.gui.app_state import AppState
 from leapp_functions.app.gui.banner import Banner
+from leapp_functions.app.gui.steps import Steps
 
 
 class MainWindow(tk.Tk):
@@ -21,6 +23,7 @@ class MainWindow(tk.Tk):
         self.iconphoto(True, self.icon)
         self.minsize(900, 700)
 
+        self.app_state = AppState(self.refresh_steps)
         self.appearance = themes.Appearance(leapp.theme)
 
         # Settings
@@ -32,10 +35,8 @@ class MainWindow(tk.Tk):
             self.bind_all("<Control-comma>", lambda _event: self.open_settings())
 
         self.banner = None
-        self.page = None
+        self.body_frame = None
         self.steps = None
-        self.screen = None
-        self.action_bar = None
 
         self.build()
 
@@ -46,7 +47,7 @@ class MainWindow(tk.Tk):
 
     def build(self):
         """ Build or replace every widget using the current palette """
-        for widget in (self.banner, self.page):
+        for widget in (self.banner, self.body_frame):
             if widget is not None:
                 widget.destroy()
         self.configure(bg=self.colors.main_bg)
@@ -60,8 +61,27 @@ class MainWindow(tk.Tk):
         self.banner = Banner(self, self)
         self.banner.pack(fill="x")
 
+        self.body_frame = tk.Frame(self, bg=self.colors.main_bg)
+        self.body_frame.pack(fill="both", expand=True, padx=24, pady=(24, 32))
+        self.body_frame.columnconfigure(0, weight=1)
+        self.body_frame.rowconfigure(1, weight=1)
+
+        self.steps = Steps(self.body_frame, self)
+        self.steps.grid(row=0, column=0, sticky="ew", pady=(0, 26))
+
+    def go(self, step):
+        """ Move to a step, given by its key, if the state allows it. """
+        if self.app_state.can_go(step):
+            self.app_state.step = step
+            self.refresh_steps()
+
+    def refresh_steps(self):
+        """ Draw the steps again, after the state changed. """
+        if self.steps is not None:
+            self.steps.refresh()
+
     def open_settings(self):
-        """The Settings window, not built yet."""
+        """ The Settings window, not built yet. """
         messagebox.showinfo("Settings", "The Settings window is not built yet.", parent=self)
 
 

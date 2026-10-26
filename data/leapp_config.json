@@ -9,11 +9,19 @@
   "theme": {
     "dark": {
       "banner_bg": "#FC3E69",
-      "main_bg": "#0E0F13"
+      "main_bg": "#0E0F13",
+      "text_primary": "#F7F2EA",
+      "text_secondary": "#A7A29B",
+      "line": "#242528",
+      "progress": "#F5161F"
     },
     "light": {
       "banner_bg": "#FC3E69",
-      "main_bg": "#FAF7F1"
+      "main_bg": "#FAF7F1",
+      "text_primary": "#171614",
+      "text_secondary": "#6D675F",
+      "line": "#E2DCD1",
+      "progress": "#F5161F"
     }
   }
 }
