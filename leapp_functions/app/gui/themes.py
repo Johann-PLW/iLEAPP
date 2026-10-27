@@ -9,12 +9,16 @@ import sys
 
 HEX_COLOUR = re.compile(r"#[0-9A-Fa-f]{6}")
 ROLES = frozenset((
-    "banner_bg",  # banner background color, identical in both dark and light theme
-    "main_bg",  # main window background color
+    "btn_accent",  # The background of a primary button
+    "header_bg",  # The header background color, identical in both dark and light theme
+    "line",  # The line between the steps
+    "main_bg",  # The main window background color
+    "progress",  # The line to indicate the progression of valid steps
+    "red_text",
+    "text_legend",
     "text_primary",
     "text_secondary",
-    "line",  # The line between the steps
-    "progress"  # The line to indicate the progression of valid steps
+    "white_color",
 ))
 
 
@@ -77,3 +81,22 @@ def sans(size, weight="normal"):
 def mono(size, weight="normal"):
     """ The monospaced font. """
     return (MONO, -size, weight)
+
+
+def apply_styles(style, colors):
+    """Give the ttk buttons the colours of a palette."""
+    style.configure("Primary.TButton", background=colors.main_bg, foreground=colors.red_text,
+                    bordercolor=colors.main_bg, lightcolor=colors.main_bg, darkcolor=colors.main_bg,
+                    font=sans(12, "bold"), padding=(18, 7), borderwidth=0, relief="flat",
+                    focuscolor=colors.main_bg)
+    style.map("Primary.TButton",
+              background=[("disabled", colors.main_bg), ("pressed", colors.btn_accent),
+                          ("active", colors.btn_accent)],
+              foreground=[("disabled", colors.text_legend), ("pressed", colors.white_color),
+                          ("active", colors.white_color)],
+              bordercolor=[("disabled", colors.main_bg), ("pressed", colors.btn_accent),
+                           ("active", colors.btn_accent)],
+              lightcolor=[("disabled", colors.main_bg), ("pressed", colors.btn_accent),
+                          ("active", colors.btn_accent)],
+              darkcolor=[("disabled", colors.main_bg), ("pressed", colors.btn_accent),
+                         ("active", colors.btn_accent)])

@@ -4,14 +4,14 @@ import tkinter as tk
 
 from leapp_functions.app.gui import images, themes
 
-# (key, title, caption, icon)
+# (key, title, icon)
 # The key is what AppState.step holds; the icon is the name of a Tabler icon.
 STAGES = (
-    ("case", "Case data", "optional", "briefcase"),
-    ("source", "Source", "extraction", "device-mobile"),
-    ("modules", "Modules", "what to parse", "list-check"),
-    ("run", "Run", "parsing", "player-play"),
-    ("results", "Results", "report", "report"),
+    ("case", "Case data", "briefcase"),
+    ("source", "Source", "device-mobile"),
+    ("modules", "Modules", "list-check"),
+    ("run", "Run", "player-play"),
+    ("results", "Results", "report"),
 )
 
 ICON_SIZE = 28  # pixels
@@ -32,7 +32,7 @@ class Steps(tk.Frame):
         self.pictures = {}
         self.hovered = None
 
-        for i, (key, title, caption, _icon) in enumerate(STAGES):
+        for i, (key, title, _icon) in enumerate(STAGES):
             self.columnconfigure(i, weight=1, uniform="step")
             stage_frame = tk.Frame(self, bg=colors.main_bg)
             stage_frame.grid(row=0, column=i, sticky="ew")
@@ -47,11 +47,8 @@ class Steps(tk.Frame):
 
             self.title_labels[key] = tk.Label(stage_frame, text=title, bg=colors.main_bg)
             self.title_labels[key].grid(row=1, column=0, columnspan=3)
-            caption_label = tk.Label(stage_frame, text=caption, bg=colors.main_bg, fg=colors.text_secondary,
-                                     font=themes.sans(10))
-            caption_label.grid(row=2, column=0, columnspan=3)
 
-            for widget in (self.icon_labels[key], self.title_labels[key], caption_label):
+            for widget in (self.icon_labels[key], self.title_labels[key]):
                 widget.bind("<Button-1>", lambda _event, key=key: self.click(key))
                 widget.bind("<Enter>", lambda _event, key=key: self.hover(key))
                 widget.bind("<Leave>", lambda _event: self.hover(None))
@@ -106,7 +103,7 @@ class Steps(tk.Frame):
         current = [stage[0] for stage in STAGES].index(state.step)
         done = state.completed()
 
-        for i, (key, _title, _caption, icon) in enumerate(STAGES):
+        for i, (key, _title, icon) in enumerate(STAGES):
             active = i == current
             complete = key in done and not active
             self.show_stage(key, icon, active, complete)

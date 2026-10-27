@@ -7,6 +7,9 @@ has to outlive them, such as the case data typed so far, lives here.
 import tkinter as tk
 from types import SimpleNamespace
 
+ORDER = ("case", "source", "modules", "review", "run", "results")
+STAGE_OF = {"review": "run"}
+
 
 class AppState:
     """ Tk variables that widgets can show and edit directly. """
@@ -26,11 +29,29 @@ class AppState:
         # "idle" until a run starts, then "running", then "finished"
         self.run_status = "idle"
 
+    def stage(self):
+        """The step of the five under the header that the screen on show belongs to."""
+        return STAGE_OF.get(self.step, self.step)
+
+    def neighbour(self, offset):
+        """The screen before or after the one on show, None at either end."""
+        index = ORDER.index(self.step) + offset
+        return ORDER[index] if 0 <= index < len(ORDER) else None
+
+    def missing_for_run(self):
+        """What a run still needs: an extraction, an output folder and at least one module."""
+        if not self.source.get().strip():
+            return "Select an extraction first: nothing can be parsed without one."
+        if not self.output.get().strip():
+            return "Choose an output folder."
+        if not self.selected_modules:
+            return "No module selected."
+        return ""
+
     def ready_to_run(self):
         """ Whether a run has everything it needs: an extraction, an output folder and at least
         one module. """
-        return bool(self.source.get().strip() and self.output.get().strip()
-                    and self.selected_modules)
+        return not self.missing_for_run()
 
     def can_go(self, step):
         """
@@ -41,7 +62,7 @@ class AppState:
         """
         if self.run_status == "running":
             return step == "run"
-        if step == "run":
+        if step in ("review", "run"):
             return self.ready_to_run()
         if step == "results":
             return self.run_status == "finished"

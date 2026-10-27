@@ -8,20 +8,28 @@
   "casedata_extension": ".lcasedata",
   "theme": {
     "dark": {
-      "banner_bg": "#FC3E69",
+      "btn_accent": "#DC1119",
+      "header_bg": "#FC3E69",
+      "line": "#3e4047",
       "main_bg": "#0E0F13",
+      "progress": "#F5161F",
+      "red_text": "#FF3B42",
+      "text_legend": "#6E6A65",
       "text_primary": "#F7F2EA",
       "text_secondary": "#A7A29B",
-      "line": "#242528",
-      "progress": "#F5161F"
+      "white_color": "#FFFFFF"
     },
     "light": {
-      "banner_bg": "#FC3E69",
+      "btn_accent": "#DC1119",
+      "header_bg": "#FC3E69",
+      "line": "#E2DCD1",
       "main_bg": "#FAF7F1",
+      "progress": "#F5161F",
+      "red_text": "#C4101A",
+      "text_legend": "#857F77",
       "text_primary": "#171614",
       "text_secondary": "#6D675F",
-      "line": "#E2DCD1",
-      "progress": "#F5161F"
+      "white_color": "#FFFFFF"
     }
   }
 }
