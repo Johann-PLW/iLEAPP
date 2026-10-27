@@ -9,7 +9,11 @@
   "theme": {
     "dark": {
       "btn_accent": "#DC1119",
+      "card": "#191A1E",
+      "card_border": "#3e4047",
       "header_bg": "#FC3E69",
+      "input": "#0E0F11",
+      "input_border": "#262729",
       "line": "#3e4047",
       "main_bg": "#0E0F13",
       "progress": "#F5161F",
@@ -21,7 +25,11 @@
     },
     "light": {
       "btn_accent": "#DC1119",
+      "card": "#FFFFFF",
+      "card_border": "#E2DCD1",
       "header_bg": "#FC3E69",
+      "input": "#FAF7F1",
+      "input_border": "#DAD8D2",
       "line": "#E2DCD1",
       "main_bg": "#FAF7F1",
       "progress": "#F5161F",

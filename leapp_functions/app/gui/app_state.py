@@ -20,7 +20,8 @@ class AppState:
 
         # Case data, typed on the Case screen
         self.case = SimpleNamespace(number=tk.StringVar(), name=tk.StringVar(),
-                                    examiner=tk.StringVar())
+                                    agency=tk.StringVar(), examiner=tk.StringVar(),
+                                    notes=tk.StringVar())
 
         self.source = tk.StringVar()
         self.output = tk.StringVar()

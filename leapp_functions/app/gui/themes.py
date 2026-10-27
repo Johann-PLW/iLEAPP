@@ -10,7 +10,11 @@ import sys
 HEX_COLOUR = re.compile(r"#[0-9A-Fa-f]{6}")
 ROLES = frozenset((
     "btn_accent",  # The background of a primary button
+    "card",
+    "card_border",
     "header_bg",  # The header background color, identical in both dark and light theme
+    "input",
+    "input_border",
     "line",  # The line between the steps
     "main_bg",  # The main window background color
     "progress",  # The line to indicate the progression of valid steps

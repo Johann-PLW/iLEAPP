@@ -11,7 +11,10 @@ from leapp_functions.app.gui import images, themes
 from leapp_functions.app.gui.app_state import AppState
 from leapp_functions.app.gui.header import Header
 from leapp_functions.app.gui.steps import Steps
+from leapp_functions.app.gui.case import CaseScreen
 from leapp_functions.app.gui.status_bar import StatusBar
+
+SCREENS = {'case': CaseScreen}
 
 
 class MainWindow(tk.Tk):
@@ -27,8 +30,7 @@ class MainWindow(tk.Tk):
 
         self.app_state = AppState(self.refresh_steps)
         self.appearance = themes.Appearance(leapp.theme)
-        self.style = ttk.Style(self)
-        self.style.theme_use("clam")
+        ttk.Style(self).theme_use("clam")
 
         # Settings
         if sys.platform == "darwin":
@@ -40,8 +42,8 @@ class MainWindow(tk.Tk):
 
         self.header = None
         self.body_frame = None
-        self.steps = None
-        self.status_bar = None
+        # The steps, the status bar and the screen of the step, by name
+        self.widgets = {}
 
         self.build()
 
@@ -56,7 +58,7 @@ class MainWindow(tk.Tk):
             if widget is not None:
                 widget.destroy()
         self.configure(bg=self.colors.main_bg)
-        themes.apply_styles(self.style, self.colors)
+        themes.apply_styles(ttk.Style(self), self.colors)
         if sys.platform == "darwin":
             appearance = "darkaqua" if self.appearance.is_dark else "aqua"
             try:
@@ -72,14 +74,26 @@ class MainWindow(tk.Tk):
         self.body_frame.columnconfigure(0, weight=1)
         self.body_frame.rowconfigure(1, weight=1)
 
-        self.steps = Steps(self.body_frame, self)
-        self.steps.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+        self.widgets["steps"] = Steps(self.body_frame, self)
+        self.widgets["steps"].grid(row=0, column=0, sticky="ew", pady=(0, 16))
 
-        self.screen = tk.Frame(self.body_frame, bg="#222222")
-        self.screen.grid(row=1, column=0, sticky="nsew")
+        self.show_screen()
 
-        self.status_bar = StatusBar(self.body_frame, self)
-        self.status_bar.grid(row=2, column=0, sticky="ew", pady=(16, 0))
+        self.widgets["status_bar"] = StatusBar(self.body_frame, self)
+        self.widgets["status_bar"].grid(row=2, column=0, sticky="ew", pady=(16, 0))
+
+    def show_screen(self):
+        """Build the screen of the step. What was typed is in the state, so it survives the screen being rebuilt."""
+        old = self.widgets.pop("screen", None)
+        if old is not None:
+            old.destroy()
+        step = self.app_state.step
+        if step in SCREENS:
+            screen = SCREENS[step](self.body_frame, self)
+        else:
+            screen = tk.Frame(self.body_frame, bg="#222222")
+        screen.grid(row=1, column=0, sticky='nsew')
+        self.widgets["screen"] = screen
 
     def go(self, step):
         """Navigate to a step when the current application state allows it."""
@@ -111,10 +125,10 @@ class MainWindow(tk.Tk):
                                 parent=self)
 
     def refresh_steps(self):
-        """Redraw the steps after the application state changes."""
-        for widget in (self.steps, self.status_bar):
-            if widget is not None:
-                widget.refresh()
+        """Redraw the steps ans status bar after the application state changes."""
+        for name in ("steps", "status_bar"):
+            if name in self.widgets:
+                self.widgets[name].refresh()
 
     def open_settings(self):
         """Settings window, not yet available."""
