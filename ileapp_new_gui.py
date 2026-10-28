@@ -2,8 +2,10 @@
 The new LEAPPs GUI --> Work in progress.
 """
 
+import subprocess
 import sys
 import tkinter as tk
+from pathlib import Path
 from tkinter import messagebox, ttk
 
 from leapp_functions import leapp
@@ -52,12 +54,24 @@ class MainWindow(tk.Tk):
 
     def redraw(self):
         """ On macOS, a window opened from a terminal stays empty until it is clicked:
-        resizing it by one pixel and back makes it draw. """
+        resizing it by one pixel and back makes it draw. Then it is brought to the front. """
         width, height = self.winfo_width(), self.winfo_height()
         self.geometry(f"{width + 1}x{height}")
         self.update_idletasks()
         self.geometry(f"{width}x{height}")
         self.geometry("")
+
+        self.activate_application()
+
+    def activate_application(self):
+        """ Make the program the active application. """
+        bundle = Path(sys.base_prefix) / "Resources" / "Python.app"
+        if getattr(sys, "frozen", False) or not bundle.is_dir():
+            return
+        try:
+            subprocess.run(["open", str(bundle)], check=False, timeout=5)
+        except (OSError, subprocess.SubprocessError):
+            pass
 
     @property
     def colors(self):
