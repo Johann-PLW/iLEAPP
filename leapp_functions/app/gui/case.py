@@ -1,44 +1,51 @@
 """The Case screen: the data of the case, which only decorates the header of the report."""
 
+import json
 import tkinter as tk
+from tkinter import filedialog, messagebox
 
-from leapp_functions.app.gui.custom_widgets import Card, Field, LabeledEntry
+from leapp_functions import leapp
+from leapp_functions.app.gui.custom_widgets import Card, Field, FileField, LabeledEntry, OutlineButton
 
 SIDE_WIDTH = 292  # pixels, of the column on the right
 GAP = 14          # pixels between two cards, and between two fields of a card
 
 
 class CaseScreen(tk.Frame):
-    """The fields of the Case screen, which edit the variables of the window's state."""
+    """ The fields of the Case screen, which edit the variables of the window's state. """
 
     def __init__(self, parent, app):
-        colors = app.colors
-        state = app.app_state
-        super().__init__(parent, bg=colors.main_bg)
+        super().__init__(parent, bg=app.colors.main_bg)
+        self.app = app
+        self.state = app.app_state
 
         # The cards take the width left over; the column on the right has a width of its own.
         self.columnconfigure(0, weight=1)
         self.columnconfigure(1, minsize=SIDE_WIDTH)
 
-        main = tk.Frame(self, bg=colors.main_bg)
+        main = tk.Frame(self, bg=app.colors.main_bg)
         main.grid(row=0, column=0, sticky="new")
         main.columnconfigure(0, weight=1)
 
-        # Each card has two fields side by side: the first of a minimum width, both growing with
-        # the window, the second twice as fast. A card with a single field and no width gives
-        # that field the whole width.
-        # The agency card will get its logo field next to its name.
+        self.build_cards(main)
+        self.build_buttons(main)
+        self.watch_case()
+
+    def build_cards(self, main):
+        """ The cards containing the fields, one under another. """
+        case = self.state.case
         cards = (
             ("CASE", None, (
-                Field("Case number", state.case.number, True),)),
+                Field("Case number", case.number),)),
             ("AGENCY", 300, (
-                Field("Agency / unit", state.case.agency),)),
+                Field("Agency / unit", case.agency),
+                Field("Logo", case.logo_path, pick=self.choose_logo))),
             ("EXAMINER", 200, (
-                Field("Examiner", state.case.examiner),
-                Field("Notes", state.case.notes))),
+                Field("Examiner", case.examiner),
+                Field("Notes", case.notes))),
         )
         for row, (title, first_width, fields) in enumerate(cards):
-            card = Card(main, app, title)
+            card = Card(main, self.app, title)
             card.grid(row=row, column=0, sticky="ew", pady=(0 if row == 0 else GAP, 0))
             if first_width is None:
                 card.body.columnconfigure(0, weight=1)
@@ -47,5 +54,95 @@ class CaseScreen(tk.Frame):
                                           weight=1 if len(fields) > 1 else 0)
                 card.body.columnconfigure(1, weight=2)
             for column, field in enumerate(fields):
-                entry = LabeledEntry(card.body, app, field)
-                entry.grid(row=0, column=column, sticky="ew", padx=(0 if column == 0 else GAP, 0))
+                widget_class = FileField if field.pick else LabeledEntry
+                widget = widget_class(card.body, self.app, field)
+                widget.grid(row=0, column=column, sticky="ew", padx=(0 if column == 0 else GAP, 0))
+
+    def build_buttons(self, main):
+        """ Case data buttons. """
+        files = tk.Frame(main, bg=self.app.colors.main_bg)
+        files.grid(row=3, column=0, sticky="w", pady=(GAP, 0))
+        buttons = {}
+        for text, command in (("Load case data", self.load_case), ("Save case data", self.save_case),
+                              ("Clear", self.clear_case)):
+            buttons[text] = OutlineButton(files, self.app, text=text, command=command, style="quiet")
+            buttons[text].pack(side="left", padx=(0, 10))
+        self.clear_button = buttons["Clear"]
+
+    def watch_case(self):
+        """ Clear is only available while a field holds something. """
+        self.traces = [(variable, variable.trace_add("write", self.update_clear))
+                       for variable in vars(self.state.case).values()]
+        self.bind("<Destroy>", self.remove_traces)
+        self.update_clear()
+
+    def update_clear(self, *_args):
+        """ Let Clear be used unless every field is empty. """
+        self.clear_button.set_enabled(not self.state.case_is_empty())
+
+    def remove_traces(self, event):
+        """ Stop watching the variables. """
+        if event.widget is self:
+            for variable, trace in self.traces:
+                variable.trace_remove("write", trace)
+
+    def clear_case(self):
+        """ Empty every field once the user has confirmed. """
+        if messagebox.askyesno("Clear case data", "Clear every field of the case data?",
+                               icon="warning", default="no", parent=self.winfo_toplevel()):
+            self.state.clear_case()
+
+    def choose_logo(self):
+        """ Ask for a picture and take it as the agency logo. """
+        path = filedialog.askopenfilename(
+            parent=self.winfo_toplevel(), title="Choose the agency logo",
+            filetypes=(("Pictures", "*.png *.jpg *.jpeg *.gif"),))
+        if not path:
+            return
+        try:
+            self.state.set_logo(path)
+        except ValueError as error:
+            messagebox.showerror("Agency logo", str(error), parent=self.winfo_toplevel())
+
+    def save_case(self):
+        """ Write the case data to a case data file. """
+        path = filedialog.asksaveasfilename(
+            parent=self.winfo_toplevel(), title="Save the case data",
+            filetypes=(("LEAPP Case Data", f"*{leapp.casedata_extension}"),),
+            defaultextension=leapp.casedata_extension)
+        if not path:
+            return
+        try:
+            with open(path, "wt", encoding="utf-8") as case_file:
+                json.dump({"leapp": "case_data", "case_data_values": self.state.case_values()},
+                          case_file)
+        except OSError as error:
+            messagebox.showerror("Save case data", f"Unable to write {path}: {error.strerror}",
+                                 parent=self.winfo_toplevel())
+        else:
+            messagebox.showinfo("Save case data", f"Case data saved: {path}",
+                                parent=self.winfo_toplevel())
+
+    def load_case(self):
+        """ Fill the fields from a case data file. """
+        path = filedialog.askopenfilename(
+            parent=self.winfo_toplevel(), title="Load case data",
+            filetypes=(("LEAPP Case Data", f"*{leapp.casedata_extension}"),))
+        if not path:
+            return
+        try:
+            with open(path, "rt", encoding="utf-8") as case_file:
+                content = json.load(case_file)
+        except OSError as error:
+            message = f"Unable to read {path}: {error.strerror}"
+        except ValueError:
+            message = "File was not a valid case data file: invalid format"
+        else:
+            if not isinstance(content, dict) or content.get("leapp") != "case_data":
+                message = "File was not a valid case data file"
+            elif not isinstance(content.get("case_data_values"), dict):
+                message = "File was not a valid case data file: invalid format"
+            else:
+                self.state.load_case_values(content["case_data_values"])
+                return
+        messagebox.showerror("Load case data", message, parent=self.winfo_toplevel())

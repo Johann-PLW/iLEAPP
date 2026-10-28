@@ -9,17 +9,18 @@ import sys
 
 HEX_COLOUR = re.compile(r"#[0-9A-Fa-f]{6}")
 ROLES = frozenset((
-    "border",  # The border of a card and of an input with the focus, the line above the status bar
-    "card",
-    "header_bg",  # The header background color, identical in both dark and light theme
-    "input",
-    "line",  # The line between the steps
+    "border",  # A card's border, an input's border with the focus, the line above the status bar
+    "button_border",  # The border of a quiet button and of a button in a card
+    "card_bg",  # The background of a card and of its labels
+    "header_bg",  # The header background color, identical in both themes
+    "input_bg",  # The background of an input
+    "line",  # The lines between the steps, an input's border, the fill of a button in a card
     "main_bg",  # The main window background color
-    "progress",  # The line to indicate the progression of valid steps
-    "red_text",
-    "text_legend",
-    "text_primary",
-    "text_secondary",
+    "progress",  # The line of the steps, from the first one to the one on show
+    "text_leapp_color",  # The title of a card, the subtitle of the status bar when Next is blocked
+    "text_legend",  # The subtitle of the status bar, the text of a button that cannot be used
+    "text_primary",  # The text of titles, inputs and buttons, the icon of a step on show or done
+    "text_secondary",  # The label above an input, the icon and title of a step not reached
 ))
 
 
@@ -49,7 +50,7 @@ def palette(theme, name):
 
 
 class Appearance:
-    """The two palettes of the window, and the one in use."""
+    """ The two palettes of the window, and the one in use. """
 
     def __init__(self, config):
         self.dark = palette(config, "dark")
@@ -85,25 +86,21 @@ def mono(size, weight="normal"):
 
 
 def apply_styles(style, colors):
-    """Give the ttk buttons the colours of a palette.
-
-    Primary is the outlined button: the window's background and the text in the header's
-    colour, and under the pointer the text in the primary colour. Filled is the button that
-    moves on: the header's colour for its background and the window's for its text, and under
-    the pointer the text in the primary colour.
-    """
+    """ Give the ttk buttons the colours of a palette. """
     for name, background, foreground, disabled, hover, hover_text in (
             ("Primary", colors.main_bg, colors.header_bg, (colors.main_bg, colors.text_legend),
              colors.main_bg, colors.text_primary),
             ("Filled", colors.header_bg, colors.main_bg, (colors.line, colors.main_bg),
-             colors.header_bg, colors.text_primary)):
+             colors.header_bg, colors.text_primary),
+            ("Quiet", colors.main_bg, colors.text_primary, (colors.main_bg, colors.text_legend),
+             colors.line, colors.text_primary),
+            ("Field", colors.line, colors.text_primary, (colors.line, colors.text_legend),
+             colors.border, colors.text_primary)):
         disabled_background, disabled_text = disabled
         style.configure(f"{name}.TButton", background=background, foreground=foreground,
                         bordercolor=background, lightcolor=background, darkcolor=background,
                         font=sans(12, "bold"), padding=(18, 7), borderwidth=0, relief="flat",
                         focuscolor=background)
-        # The dotted ring of the focus is drawn in the colour of the button so that it does
-        # not show
         states = [("disabled", disabled_background), ("pressed", hover), ("active", hover)]
         style.map(f"{name}.TButton",
                   background=states,

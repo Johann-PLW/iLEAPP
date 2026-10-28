@@ -98,21 +98,15 @@ class Steps(tk.Frame):
         self.title_labels[key].configure(fg=colors.text_primary if bright else colors.text_secondary, font=font)
 
     def refresh(self):
-        """ Show the state: the current stage, the ones done, and the lines after them. """
+        """ Show the state: the current stage, the ones done, and the line up to the current one. """
         colors, state = self.app.colors, self.app.app_state
-        current = [stage[0] for stage in STAGES].index(state.step)
-        done = state.completed()
+        current = [stage[0] for stage in STAGES].index(state.stage())
+        complete = {key for key in state.completed() if key != state.stage()}
 
         for i, (key, _title, icon) in enumerate(STAGES):
-            active = i == current
-            complete = key in done and not active
-            self.show_stage(key, icon, active, complete)
+            self.show_stage(key, icon, i == current, key in complete)
 
-            # The line on each side of an icon is red when the stage before it is done: the
-            # stage's own line on the right, the previous stage's on the left
             if key in self.left_lines:
-                self.left_lines[key].configure(
-                    bg=colors.progress if STAGES[i - 1][0] in done else colors.line)
+                self.left_lines[key].configure(bg=colors.progress if i <= current else colors.line)
             if key in self.right_lines:
-                self.right_lines[key].configure(
-                    bg=colors.progress if key in done else colors.line)
+                self.right_lines[key].configure(bg=colors.progress if i < current else colors.line)

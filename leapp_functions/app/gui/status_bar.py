@@ -28,7 +28,7 @@ TEXTS = {
 
 
 class StatusBar(tk.Frame):
-    """The title and subtitle of the screen, and the Back and Next buttons."""
+    """ The title and subtitle of the screen, and the Back and Next buttons. """
 
     def __init__(self, parent, app):
         colors = self.colors = app.colors
@@ -52,7 +52,7 @@ class StatusBar(tk.Frame):
         self.back_button = OutlineButton(self, app, text="Back", command=app.go_back)
         self.back_button.grid(row=1, column=1, padx=(16, 0), pady=(8, 0))
         # Next, and in its place on the Run screen the button that stops the run
-        self.next_button = OutlineButton(self, app, command=app.go_next, filled=True)
+        self.next_button = OutlineButton(self, app, command=app.go_next, style="filled")
         self.next_button.grid(row=1, column=2, padx=(10, 0), pady=(8, 0))
         self.stop_button = OutlineButton(self, app, command=app.go_next)
         self.stop_button.grid(row=1, column=2, padx=(10, 0), pady=(8, 0))
@@ -60,7 +60,7 @@ class StatusBar(tk.Frame):
         self.refresh()
 
     def refresh(self):
-        """Show the state: the texts of the screen, and which buttons can be used."""
+        """ Show the state: the texts of the screen, and which buttons can be used. """
         colors, state = self.colors, self.app.app_state
         title, subtitle, next_text = TEXTS[state.step]
         if state.step == "artifacts":
@@ -74,7 +74,7 @@ class StatusBar(tk.Frame):
         self.title_label.configure(text=title)
         self.subtitle_label.configure(
             text=state.missing_for_run() if blocked else subtitle,
-            fg=colors.red_text if blocked else colors.text_legend)
+            fg=colors.text_leapp_color if blocked else colors.text_legend)
 
         # Only one of the two is shown. grid_remove() hides a widget and keeps where it was
         # placed, which grid() brings back.

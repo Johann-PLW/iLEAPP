@@ -18,10 +18,10 @@ SCREENS = {'case': CaseScreen}
 
 
 class MainWindow(tk.Tk):
-    """Main application window for the LEAPP GUI."""
+    """ Main application window for the LEAPP GUI. """
 
     def __init__(self):
-        """Initialize the window, application state, and widgets."""
+        """ Initialize the window, application state, and widgets. """
         super().__init__()
         self.title(f"{leapp.name} version {leapp.version}")
         self.icon = images.load("icon.png")
@@ -53,7 +53,7 @@ class MainWindow(tk.Tk):
         return self.appearance.colors
 
     def build(self):
-        """Build or replace every widget using the current palette."""
+        """ Build or replace every widget using the current palette. """
         for widget in (self.header, self.body_frame):
             if widget is not None:
                 widget.destroy()
@@ -83,7 +83,7 @@ class MainWindow(tk.Tk):
         self.widgets["status_bar"].grid(row=2, column=0, sticky="ew", pady=(16, 8))
 
     def show_screen(self):
-        """Build the screen of the step. What was typed is in the state, so it survives the screen being rebuilt."""
+        """ Build the screen of the step. What was typed is in the state, so it survives the screen being rebuilt. """
         old = self.widgets.pop("screen", None)
         if old is not None:
             old.destroy()
@@ -96,22 +96,23 @@ class MainWindow(tk.Tk):
         self.widgets["screen"] = screen
 
     def go(self, step):
-        """Navigate to a step when the current application state allows it."""
+        """ Navigate to a step when the current application state allows it. """
         state = self.app_state
         if step == "run" and state.run_status != "running":
             step = "review"
         if state.can_go(step):
+            state.left.add(state.step)
             state.step = step
             self.refresh_steps()
 
     def go_back(self):
-        """Navigate to the previous step."""
+        """ Navigate to the previous step. """
         previous = self.app_state.neighbour(-1)
         if previous is not None:
             self.go(previous)
 
     def go_next(self):
-        """Navigate to the next step."""
+        """ Navigate to the next step. """
         state = self.app_state
         if state.step in ("case", "source", "artifacts"):
             self.go(state.neighbour(1))
@@ -125,13 +126,13 @@ class MainWindow(tk.Tk):
                                 parent=self)
 
     def refresh_steps(self):
-        """Redraw the steps ans status bar after the application state changes."""
+        """ Redraw the steps ans status bar after the application state changes. """
         for name in ("steps", "status_bar"):
             if name in self.widgets:
                 self.widgets[name].refresh()
 
     def open_settings(self):
-        """Settings window, not yet available."""
+        """ Settings window, not yet available. """
         messagebox.showinfo("Settings", "The Settings window is not built yet.", parent=self)
 
 
