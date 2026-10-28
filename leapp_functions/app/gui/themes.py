@@ -9,12 +9,10 @@ import sys
 
 HEX_COLOUR = re.compile(r"#[0-9A-Fa-f]{6}")
 ROLES = frozenset((
-    "btn_accent",  # The background of a primary button
+    "border",  # The border of a card and of an input with the focus, the line above the status bar
     "card",
-    "card_border",
     "header_bg",  # The header background color, identical in both dark and light theme
     "input",
-    "input_border",
     "line",  # The line between the steps
     "main_bg",  # The main window background color
     "progress",  # The line to indicate the progression of valid steps
@@ -22,7 +20,6 @@ ROLES = frozenset((
     "text_legend",
     "text_primary",
     "text_secondary",
-    "white_color",
 ))
 
 
@@ -88,19 +85,28 @@ def mono(size, weight="normal"):
 
 
 def apply_styles(style, colors):
-    """Give the ttk buttons the colours of a palette."""
-    style.configure("Primary.TButton", background=colors.main_bg, foreground=colors.red_text,
-                    bordercolor=colors.main_bg, lightcolor=colors.main_bg, darkcolor=colors.main_bg,
-                    font=sans(12, "bold"), padding=(18, 7), borderwidth=0, relief="flat",
-                    focuscolor=colors.main_bg)
-    style.map("Primary.TButton",
-              background=[("disabled", colors.main_bg), ("pressed", colors.btn_accent),
-                          ("active", colors.btn_accent)],
-              foreground=[("disabled", colors.text_legend), ("pressed", colors.white_color),
-                          ("active", colors.white_color)],
-              bordercolor=[("disabled", colors.main_bg), ("pressed", colors.btn_accent),
-                           ("active", colors.btn_accent)],
-              lightcolor=[("disabled", colors.main_bg), ("pressed", colors.btn_accent),
-                          ("active", colors.btn_accent)],
-              darkcolor=[("disabled", colors.main_bg), ("pressed", colors.btn_accent),
-                         ("active", colors.btn_accent)])
+    """Give the ttk buttons the colours of a palette.
+
+    Primary is the outlined button: the window's background and the text in the header's
+    colour, and under the pointer the text in the primary colour. Filled is the button that
+    moves on: the header's colour for its background and the window's for its text, and under
+    the pointer the text in the primary colour.
+    """
+    for name, background, foreground, disabled, hover, hover_text in (
+            ("Primary", colors.main_bg, colors.header_bg, (colors.main_bg, colors.text_legend),
+             colors.main_bg, colors.text_primary),
+            ("Filled", colors.header_bg, colors.main_bg, (colors.line, colors.main_bg),
+             colors.header_bg, colors.text_primary)):
+        disabled_background, disabled_text = disabled
+        style.configure(f"{name}.TButton", background=background, foreground=foreground,
+                        bordercolor=background, lightcolor=background, darkcolor=background,
+                        font=sans(12, "bold"), padding=(18, 7), borderwidth=0, relief="flat",
+                        focuscolor=background)
+        # The dotted ring of the focus is drawn in the colour of the button so that it does
+        # not show
+        states = [("disabled", disabled_background), ("pressed", hover), ("active", hover)]
+        style.map(f"{name}.TButton",
+                  background=states,
+                  foreground=[("disabled", disabled_text), ("pressed", hover_text),
+                              ("active", hover_text)],
+                  bordercolor=states, lightcolor=states, darkcolor=states, focuscolor=states)

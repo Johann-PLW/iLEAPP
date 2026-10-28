@@ -7,7 +7,7 @@ has to outlive them, such as the case data typed so far, lives here.
 import tkinter as tk
 from types import SimpleNamespace
 
-ORDER = ("case", "source", "modules", "review", "run", "results")
+ORDER = ("case", "source", "artifacts", "review", "run", "results")
 STAGE_OF = {"review": "run"}
 
 
@@ -19,13 +19,13 @@ class AppState:
         self.step = "case"
 
         # Case data, typed on the Case screen
-        self.case = SimpleNamespace(number=tk.StringVar(), name=tk.StringVar(),
+        self.case = SimpleNamespace(number=tk.StringVar(),
                                     agency=tk.StringVar(), examiner=tk.StringVar(),
                                     notes=tk.StringVar())
 
         self.source = tk.StringVar()
         self.output = tk.StringVar()
-        self.selected_modules = set()
+        self.selected_artifacts = set()
 
         # "idle" until a run starts, then "running", then "finished"
         self.run_status = "idle"
@@ -40,25 +40,25 @@ class AppState:
         return ORDER[index] if 0 <= index < len(ORDER) else None
 
     def missing_for_run(self):
-        """What a run still needs: an extraction, an output folder and at least one module."""
+        """What a run still needs: an extraction, an output folder and at least one artifact."""
         if not self.source.get().strip():
             return "Select an extraction first: nothing can be parsed without one."
         if not self.output.get().strip():
             return "Choose an output folder."
-        if not self.selected_modules:
-            return "No module selected."
+        if not self.selected_artifacts:
+            return "No artifact selected."
         return ""
 
     def ready_to_run(self):
         """ Whether a run has everything it needs: an extraction, an output folder and at least
-        one module. """
+        one artifact. """
         return not self.missing_for_run()
 
     def can_go(self, step):
         """
         Whether the user may move to a step, given by its key.
-        Case, Source and Modules are always open, Modules too without an extraction so that the
-        modules can be looked at and a profile loaded first. Run needs everything a run needs,
+        Case, Source and Artifacts are always open, Artifacts too without an extraction so that the
+        artifacts can be looked at and a profile loaded first. Run needs everything a run needs,
         and Results a run that has taken place. While a run is on, nothing else can be reached.
         """
         if self.run_status == "running":
@@ -72,7 +72,7 @@ class AppState:
     def completed(self):
         """ The steps done, shown with a tick: a set of the keys used by step. """
         done = set()
-        case_values = (self.case.number, self.case.name, self.case.examiner)
+        case_values = (self.case.number, self.case.examiner)
         if any(value.get().strip() for value in case_values):
             done.add("case")
         return done

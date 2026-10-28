@@ -9,7 +9,7 @@ from leapp_functions.app.gui import images, themes
 STAGES = (
     ("case", "Case data", "briefcase"),
     ("source", "Source", "device-mobile"),
-    ("modules", "Modules", "list-check"),
+    ("artifacts", "Artifacts", "list-check"),
     ("run", "Run", "player-play"),
     ("results", "Results", "report"),
 )

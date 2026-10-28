@@ -12,13 +12,13 @@ from leapp_functions.app.gui import themes
 from leapp_functions.app.gui.custom_widgets import OutlineButton
 
 # For each screen: its title, its subtitle and the text of its main button. The subtitle of
-# Modules is worked out when it is shown, from the number of modules selected.
+# Artifacts is worked out when it is shown, from the number of artifacts selected.
 TEXTS = {
     "case": ("Case data is optional", "It only decorates the header of the report",
              "Continue to Source"),
     "source": ("One path is required", "The keychain and the output folder have defaults",
-               "Continue to Modules"),
-    "modules": ("Choose what to parse", "", "Review and run"),
+               "Continue to Artifacts"),
+    "artifacts": ("Choose what to parse", "", "Review and run"),
     "review": ("Ready to run", "The run takes place in the background: the window stays usable",
                "Start parsing"),
     "run": ("Parsing in progress", "Stopping interrupts iLEAPP: the report will be incomplete",
@@ -37,7 +37,7 @@ class StatusBar(tk.Frame):
 
         # A line across the bar, and the room under it, then the texts on the left taking the
         # width left over, then the two buttons.
-        tk.Frame(self, height=1, bg=colors.line).grid(row=0, column=0, columnspan=3, sticky="ew")
+        tk.Frame(self, height=1, bg=colors.border).grid(row=0, column=0, columnspan=3, sticky="ew")
         self.columnconfigure(0, weight=1)
 
         texts = tk.Frame(self, bg=colors.main_bg)
@@ -52,7 +52,7 @@ class StatusBar(tk.Frame):
         self.back_button = OutlineButton(self, app, text="Back", command=app.go_back)
         self.back_button.grid(row=1, column=1, padx=(16, 0), pady=(8, 0))
         # Next, and in its place on the Run screen the button that stops the run
-        self.next_button = OutlineButton(self, app, command=app.go_next)
+        self.next_button = OutlineButton(self, app, command=app.go_next, filled=True)
         self.next_button.grid(row=1, column=2, padx=(10, 0), pady=(8, 0))
         self.stop_button = OutlineButton(self, app, command=app.go_next)
         self.stop_button.grid(row=1, column=2, padx=(10, 0), pady=(8, 0))
@@ -63,13 +63,13 @@ class StatusBar(tk.Frame):
         """Show the state: the texts of the screen, and which buttons can be used."""
         colors, state = self.colors, self.app.app_state
         title, subtitle, next_text = TEXTS[state.step]
-        if state.step == "modules":
-            subtitle = f"{len(state.selected_modules)} modules selected"
+        if state.step == "artifacts":
+            subtitle = f"{len(state.selected_artifacts)} artifacts selected"
 
         # Next is blocked when the screen after this one cannot be reached. Of the screens
         # that move on to another one, only the review can be unreachable.
         target = state.neighbour(1)
-        blocked = state.step == "modules" and not state.can_go(target)
+        blocked = state.step == "artifacts" and not state.can_go(target)
 
         self.title_label.configure(text=title)
         self.subtitle_label.configure(

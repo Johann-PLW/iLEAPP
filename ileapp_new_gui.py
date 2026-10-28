@@ -75,12 +75,12 @@ class MainWindow(tk.Tk):
         self.body_frame.rowconfigure(1, weight=1)
 
         self.widgets["steps"] = Steps(self.body_frame, self)
-        self.widgets["steps"].grid(row=0, column=0, sticky="ew", pady=(0, 16))
+        self.widgets["steps"].grid(row=0, column=0, sticky="ew", pady=(0, 24))
 
         self.show_screen()
 
         self.widgets["status_bar"] = StatusBar(self.body_frame, self)
-        self.widgets["status_bar"].grid(row=2, column=0, sticky="ew", pady=(16, 0))
+        self.widgets["status_bar"].grid(row=2, column=0, sticky="ew", pady=(16, 8))
 
     def show_screen(self):
         """Build the screen of the step. What was typed is in the state, so it survives the screen being rebuilt."""
@@ -113,7 +113,7 @@ class MainWindow(tk.Tk):
     def go_next(self):
         """Navigate to the next step."""
         state = self.app_state
-        if state.step in ("case", "source", "modules"):
+        if state.step in ("case", "source", "artifacts"):
             self.go(state.neighbour(1))
         elif state.step == "results":
             # A new run: what was chosen is kept

@@ -24,23 +24,28 @@ class CaseScreen(tk.Frame):
         main.grid(row=0, column=0, sticky="new")
         main.columnconfigure(0, weight=1)
 
-        # Each card has two fields side by side: the first of a fixed width, the second taking
-        # the rest. The agency card will get its logo field next to its name.
+        # Each card has two fields side by side: the first of a minimum width, both growing with
+        # the window, the second twice as fast. A card with a single field and no width gives
+        # that field the whole width.
+        # The agency card will get its logo field next to its name.
         cards = (
-            ("CASE", 180, (
-                Field("Case number", state.case.number, "2026-0418", True),
-                Field("Case name", state.case.name, "Operation Devlin", False))),
+            ("CASE", None, (
+                Field("Case number", state.case.number, True),)),
             ("AGENCY", 300, (
-                Field("Agency / unit", state.case.agency, "Digital Forensics Unit", False),)),
+                Field("Agency / unit", state.case.agency),)),
             ("EXAMINER", 200, (
-                Field("Examiner", state.case.examiner, "Jane Doe", False),
-                Field("Notes", state.case.notes, "Seized 2026-04-14, sealed bag 118", False))),
+                Field("Examiner", state.case.examiner),
+                Field("Notes", state.case.notes))),
         )
         for row, (title, first_width, fields) in enumerate(cards):
             card = Card(main, app, title)
             card.grid(row=row, column=0, sticky="ew", pady=(0 if row == 0 else GAP, 0))
-            card.body.columnconfigure(0, minsize=first_width)
-            card.body.columnconfigure(1, weight=1)
+            if first_width is None:
+                card.body.columnconfigure(0, weight=1)
+            else:
+                card.body.columnconfigure(0, minsize=first_width,
+                                          weight=1 if len(fields) > 1 else 0)
+                card.body.columnconfigure(1, weight=2)
             for column, field in enumerate(fields):
                 entry = LabeledEntry(card.body, app, field)
                 entry.grid(row=0, column=column, sticky="ew", padx=(0 if column == 0 else GAP, 0))
