@@ -1,11 +1,12 @@
 """The Case screen: the data of the case, which only decorates the header of the report."""
 
-import json
 import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from leapp_functions import leapp
 from leapp_functions.app.gui.custom_widgets import Card, Field, FileField, LabeledEntry, OutlineButton
+from leapp_functions.data_sources.json_files import (get_json_file_content,
+                                                    save_content_to_json_file)
 
 SIDE_WIDTH = 292  # pixels, of the column on the right
 GAP = 14          # pixels between two cards, and between two fields of a card
@@ -112,16 +113,14 @@ class CaseScreen(tk.Frame):
             defaultextension=leapp.casedata_extension)
         if not path:
             return
-        try:
-            with open(path, "wt", encoding="utf-8") as case_file:
-                json.dump({"leapp": "case_data", "case_data_values": self.state.case_values()},
-                          case_file)
-        except OSError as error:
-            messagebox.showerror("Save case data", f"Unable to write {path}: {error.strerror}",
-                                 parent=self.winfo_toplevel())
-        else:
+        saved = save_content_to_json_file(
+            path, {"leapp": "case_data", "case_data_values": self.state.case_values()})
+        if saved:
             messagebox.showinfo("Save case data", f"Case data saved: {path}",
                                 parent=self.winfo_toplevel())
+        else:
+            messagebox.showerror("Save case data", f"Unable to write {path}.",
+                                 parent=self.winfo_toplevel())
 
     def load_case(self):
         """ Fill the fields from a case data file. """
@@ -130,19 +129,12 @@ class CaseScreen(tk.Frame):
             filetypes=(("LEAPP Case Data", f"*{leapp.casedata_extension}"),))
         if not path:
             return
-        try:
-            with open(path, "rt", encoding="utf-8") as case_file:
-                content = json.load(case_file)
-        except OSError as error:
-            message = f"Unable to read {path}: {error.strerror}"
-        except ValueError:
+        content = get_json_file_content(path)
+        if not isinstance(content, dict) or content.get("leapp") != "case_data":
+            message = "File was not a valid case data file"
+        elif not isinstance(content.get("case_data_values"), dict):
             message = "File was not a valid case data file: invalid format"
         else:
-            if not isinstance(content, dict) or content.get("leapp") != "case_data":
-                message = "File was not a valid case data file"
-            elif not isinstance(content.get("case_data_values"), dict):
-                message = "File was not a valid case data file: invalid format"
-            else:
-                self.state.load_case_values(content["case_data_values"])
-                return
+            self.state.load_case_values(content["case_data_values"])
+            return
         messagebox.showerror("Load case data", message, parent=self.winfo_toplevel())
