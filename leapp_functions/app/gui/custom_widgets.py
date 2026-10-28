@@ -6,12 +6,13 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 
-from leapp_functions.app.gui import themes
+from leapp_functions.app.gui import images, themes
 
 
 BORDER = 2
 TOOLTIP_DELAY = 500
 TOOLTIP_WIDTH = 520
+INFO_SIZE = 14
 
 Field = namedtuple("Field", "label variable mono pick", defaults=(False, None))
 
@@ -88,10 +89,11 @@ class Tooltip:
                 self.window.overrideredirect(True)
         else:
             self.window.overrideredirect(True)
-        frame = tk.Frame(self.window, bg=colors.line, highlightthickness=1,
-                         highlightbackground=colors.border, highlightcolor=colors.border)
+        # Colours reversed: the text's colour for the background and the window's for the text,
+        # so that it is not mistaken for a button, an input or a card
+        frame = tk.Frame(self.window, bg=colors.text_primary)
         frame.pack()
-        tk.Label(frame, text=text, bg=colors.line, fg=colors.text_primary, justify="left",
+        tk.Label(frame, text=text, bg=colors.text_primary, fg=colors.main_bg, justify="left",
                  wraplength=TOOLTIP_WIDTH, font=themes.sans(11)).pack(padx=8, pady=5)
         self.window.geometry(
             f"+{widget.winfo_rootx()}+{widget.winfo_rooty() + widget.winfo_height() + 6}")
@@ -137,8 +139,10 @@ class LabeledEntry(tk.Frame):
         super().__init__(parent, bg=colors.card_bg)
         font = themes.mono(13) if field.mono else themes.sans(13)
 
-        tk.Label(self, text=field.label, anchor="w", bg=colors.card_bg, fg=colors.text_secondary,
-                 font=themes.sans(10)).grid(row=0, column=0, sticky="ew")
+        self.title = tk.Frame(self, bg=colors.card_bg)
+        self.title.grid(row=0, column=0, sticky="ew")
+        tk.Label(self.title, text=field.label, anchor="w", bg=colors.card_bg,
+                 fg=colors.text_secondary, font=themes.sans(10)).pack(side="left")
 
         self.box = tk.Frame(self, bg=colors.input_bg, highlightthickness=1,
                             highlightbackground=colors.line,
@@ -169,13 +173,27 @@ class FileField(tk.Frame):
         self.labeled.grid(row=0, column=0, sticky="ew")
         self.columnconfigure(0, weight=1)
 
-        self.entry = self.labeled.entry
+        entry = self.labeled.entry
         self.shown = tk.StringVar()
-        self.entry.configure(textvariable=self.shown, state="readonly",
-                             readonlybackground=colors.input_bg)
+        entry.configure(textvariable=self.shown, state="readonly",
+                        readonlybackground=colors.input_bg)
 
-        # The entry shows the name only: the tooltip gives the whole path
-        self.tooltip = Tooltip((self.labeled.box, self.entry), app, field.variable.get)
+        # The icon after the label says that there is a tooltip.
+        self.info = tk.Label(self.labeled.title, bg=colors.card_bg, padx=0, pady=0, borderwidth=0)
+        # The line of the label is as high as the icon, with or without it: nothing jumps
+        self.labeled.rowconfigure(0, minsize=INFO_SIZE)
+        self.info.image = images.load_disc_icon("info-small", INFO_SIZE, colors.text_secondary,
+                                               colors.card_bg)
+        self.info.configure(image=self.info.image)
+
+        # The entry shows the name only: the tooltip gives the whole path. The pointer on the
+        # entry, on its box or on the icon colours the border of the box too.
+        hovered = self.hover_widgets()
+        self.tooltip = Tooltip(hovered, app, field.variable.get)
+        for widget in hovered:
+            widget.bind("<Enter>", self.hover, add="+")
+            widget.bind("<Leave>", self.hover, add="+")
+
         self.button = OutlineButton(self, app, command=field.pick, style="in_card")
         self.button.grid(row=0, column=1, padx=(14, 0), sticky="s")
 
@@ -184,9 +202,23 @@ class FileField(tk.Frame):
         self.bind("<Destroy>", lambda _event: self.variable.trace_remove("write", trace))
         self.refresh()
 
+    def hover_widgets(self):
+        """ The widgets that show the tooltip when the pointer is on them. """
+        return (self.labeled.box, self.labeled.entry, self.info)
+
+    def hover(self, _event=None):
+        """ Colour the border of the box while the pointer is on the field and there is a tooltip to read. """
+        under = self.winfo_containing(*self.winfo_pointerxy())
+        highlighted = (under in self.hover_widgets() and self.variable.get()) or self.focus_get() is self.labeled.entry
+        self.labeled.set_border(self.labeled.colors.border if highlighted else self.labeled.colors.line)
+
     def refresh(self):
         """ Show the name of the file, and Choose or Change depending on whether one has been picked. """
         path = self.variable.get()
+        if path:
+            self.info.pack(side="left", padx=(6, 0))
+        else:
+            self.info.pack_forget()
         # PureWindowsPath reads both / and \ as separators: a path saved on Windows is
         # shown as well on another system
         self.shown.set(PureWindowsPath(path).name)

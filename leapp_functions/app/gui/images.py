@@ -28,6 +28,8 @@ TICK_OFFSET = 12
 TICK_SIZE = 13
 SMOOTHING = 4
 
+DISC_MARK_SCALE = 1.5
+
 
 def load(name, height=None):
     """ Return the image from the image name, scaled to height pixels when a height is given. """
@@ -100,3 +102,26 @@ def icon_image(name, size, color, margin=0, tick=None):
 def load_icon(name, size, color, margin=0, tick=None):
     """ icon_image() as an image Tk can show. """
     return ImageTk.PhotoImage(icon_image(name, size, color, margin, tick))
+
+
+@cache
+def disc_icon_image(name, size, disc_color, mark_color):
+    """ A glyph in a filled disc, as a Pillow image on a transparent background: a filled version of
+    an outlined icon, which stays readable when small.
+    Args:
+        name (str): Tabler icon name of the glyph, such as "info-small"
+        size (int): Diameter of the disc in pixels
+        disc_color (str): Hex color of the disc
+        mark_color (str): Hex color of the glyph
+    """
+    big = size * SMOOTHING
+    image = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    ImageDraw.Draw(image).ellipse([0, 0, big - 1, big - 1], fill=disc_color)
+    mark = icon_image(name, round(size * DISC_MARK_SCALE * SMOOTHING), mark_color)
+    image.alpha_composite(mark, ((big - mark.width) // 2, (big - mark.height) // 2))
+    return image.resize((size, size), Image.Resampling.LANCZOS)
+
+
+def load_disc_icon(name, size, disc_color, mark_color):
+    """ disc_icon_image() as an image Tk can show. """
+    return ImageTk.PhotoImage(disc_icon_image(name, size, disc_color, mark_color))
