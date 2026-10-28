@@ -46,6 +46,18 @@ class MainWindow(tk.Tk):
         self.widgets = {}
 
         self.build()
+        if sys.platform == "darwin":
+            # the window has to be on screen first
+            self.after(300, self.redraw)
+
+    def redraw(self):
+        """ On macOS, a window opened from a terminal stays empty until it is clicked:
+        resizing it by one pixel and back makes it draw. """
+        width, height = self.winfo_width(), self.winfo_height()
+        self.geometry(f"{width + 1}x{height}")
+        self.update_idletasks()
+        self.geometry(f"{width}x{height}")
+        self.geometry("")
 
     @property
     def colors(self):
