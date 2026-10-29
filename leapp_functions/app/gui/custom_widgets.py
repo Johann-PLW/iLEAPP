@@ -114,20 +114,18 @@ class Card(tk.Frame):
     What goes in the card is placed in its body, the frame below the title.
     """
 
-    def __init__(self, parent, app, title=""):
+    def __init__(self, parent, app, title="", accent=False):
         colors = self.colors = app.colors
-        # highlightthickness draws a border round a frame, of the colour highlightbackground.
-        # While a widget inside has the focus, macOS draws it in highlightcolor instead, which
-        # is the colour of the text unless it is given: so both are the border's colour.
-        super().__init__(parent, bg=colors.card_bg, highlightthickness=1,
+        self.background = colors.card_accent if accent else colors.card_bg
+        super().__init__(parent, bg=self.background, highlightthickness=1,
                          highlightbackground=colors.border,
                          highlightcolor=colors.border)
-        inner = tk.Frame(self, bg=colors.card_bg)
+        inner = tk.Frame(self, bg=self.background)
         inner.pack(fill="both", expand=True, padx=16, pady=(10, 14))
         if title:
-            tk.Label(inner, text=title, anchor="w", bg=colors.card_bg, fg=colors.text_leapp_color,
+            tk.Label(inner, text=title, anchor="w", bg=self.background, fg=colors.text_leapp_color,
                      font=themes.sans(10, "bold")).pack(fill="x", pady=(0, 4))
-        self.body = tk.Frame(inner, bg=colors.card_bg)
+        self.body = tk.Frame(inner, bg=self.background)
         self.body.pack(fill="both", expand=True)
 
 

@@ -3,6 +3,8 @@ Images, read from the assets folder.
 Tabler icons, glyphs of tabler-icons.ttf found in tabler-icons.css: https://tabler.io/icons lists them all.
 """
 
+import base64
+import io
 import re
 import sys
 from functools import cache
@@ -29,6 +31,17 @@ TICK_SIZE = 13
 SMOOTHING = 4
 
 DISC_MARK_SCALE = 1.5
+
+
+def from_base64(encoded, width, height):
+    """ The picture held by a base64 string, reduced to fit in a box of width by height pixels.
+    Returns None when the string is not a picture. """
+    try:
+        picture = Image.open(io.BytesIO(base64.b64decode(encoded, validate=True)))
+        picture.thumbnail((width, height))
+        return ImageTk.PhotoImage(picture.convert("RGBA"))
+    except (OSError, ValueError, Image.DecompressionBombError):
+        return None
 
 
 def load(name, height=None):

@@ -4,12 +4,29 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 from leapp_functions import leapp
+from leapp_functions.app.gui import images, themes
+from leapp_functions.app.gui.app_state import CASE_KEYS
 from leapp_functions.app.gui.custom_widgets import Card, Field, FileField, LabeledEntry, OutlineButton
 from leapp_functions.data_sources.json_files import (get_json_file_content,
                                                     save_content_to_json_file)
 
-SIDE_WIDTH = 292  # pixels, of the column on the right
-GAP = 14          # pixels between two cards, and between two fields of a card
+SIDE_WIDTH = 300
+GAP = 14
+
+# Report preview colors whatever the window's palette is.
+PAPER = "#FFFFFF"
+INK = "#212529"
+GRID = "#DEE2E6"
+HINT = "#6C757D"
+
+CAPTION = "The Case Information of the HTML report's first page. Updates as you type."
+EMPTY = "No case data"
+KEY_WIDTH = 78
+VALUE_WIDTH = 150
+LOGO_MIN_WIDTH, LOGO_MAX_WIDTH = 50, 200
+LOGO_SHARE = 4
+LOGO_MAX_HEIGHT = 120
+MAX_SHOWN = 240
 
 
 class CaseScreen(tk.Frame):
@@ -20,9 +37,8 @@ class CaseScreen(tk.Frame):
         self.app = app
         self.state = app.app_state
 
-        # The cards take the width left over; the column on the right has a width of its own.
-        self.columnconfigure(0, weight=1)
-        self.columnconfigure(1, minsize=SIDE_WIDTH)
+        self.columnconfigure(0, weight=2, uniform="case")
+        self.columnconfigure(1, weight=1, uniform="case", minsize=SIDE_WIDTH)
 
         main = tk.Frame(self, bg=app.colors.main_bg)
         main.grid(row=0, column=0, sticky="new")
@@ -30,6 +46,7 @@ class CaseScreen(tk.Frame):
 
         self.build_cards(main)
         self.build_buttons(main)
+        self.build_preview()
         self.watch_case()
 
     def build_cards(self, main):
@@ -69,6 +86,11 @@ class CaseScreen(tk.Frame):
             buttons[text] = OutlineButton(files, self.app, text=text, command=command, style="quiet")
             buttons[text].pack(side="left", padx=(0, 10))
         self.clear_button = buttons["Clear"]
+
+    def build_preview(self):
+        """ The card on the right: what the fields give in the Case Information part of the HTML report. """
+        self.preview = ReportPreview(self, self.app)
+        self.preview.grid(row=0, column=1, sticky="new", padx=(GAP, 0))
 
     def watch_case(self):
         """ Clear is only available while a field holds something. """
@@ -138,3 +160,132 @@ class CaseScreen(tk.Frame):
             self.state.load_case_values(content["case_data_values"])
             return
         messagebox.showerror("Load case data", message, parent=self.winfo_toplevel())
+
+
+class LogoCell(tk.Frame):
+    """ The cell of the table that holds the agency logo. """
+
+    def __init__(self, parent):
+        super().__init__(parent, bg=PAPER, highlightthickness=1, highlightbackground=GRID,
+                         highlightcolor=GRID)
+        self.label = tk.Label(self, bg=PAPER, borderwidth=0)
+        self.label.pack(expand=True, padx=6, pady=4)
+        self.picture = None
+        self.key = None
+
+    def show(self, encoded, width):
+        """ Show the picture of a base64 string. """
+        if (encoded, width) != self.key:
+            self.key = (encoded, width)
+            self.picture = images.from_base64(encoded, width, LOGO_MAX_HEIGHT) if encoded else None
+            self.label.configure(image=self.picture or "")
+        return self.picture is not None
+
+
+class ReportPreview(tk.Frame):
+    """ A white sheet showing, as the report does, a row for each field of the case that is filled in. """
+
+    def __init__(self, parent, app):
+        super().__init__(parent, bg=app.colors.main_bg)
+        self.case = app.app_state.case
+        card = Card(self, app, "REPORT PREVIEW", accent=True)
+        card.pack(fill="x")
+
+        sheet = tk.Frame(card.body, bg=PAPER, highlightthickness=1, highlightbackground=GRID,
+                         highlightcolor=GRID)
+        sheet.pack(fill="x")
+        inner = tk.Frame(sheet, bg=PAPER)
+        inner.pack(fill="x", padx=12, pady=12)
+        tk.Label(inner, text="Case Information", anchor="w", bg=PAPER, fg=INK,
+                 font=themes.sans(15, "bold")).pack(fill="x", pady=(0, 8))
+        self.rows = tk.Frame(inner, bg=PAPER)
+        self.rows.pack(fill="x")
+        self.rows.columnconfigure(2, weight=1)
+        self.build_rows()
+        self.rows.bind("<Configure>", self.refresh_logo)
+
+        caption = tk.Label(card.body, text=CAPTION, anchor="w", justify="left", width=1,
+                           bg=card.background, fg=app.colors.text_secondary,
+                           font=themes.sans(11))
+        caption.pack(fill="x", pady=(10, 0))
+        caption.bind("<Configure>", self.wrap_value)
+
+        # What is typed shows at once
+        self.traces = [(variable, variable.trace_add("write", self.refresh))
+                       for variable in vars(self.case).values()]
+        self.bind("<Destroy>", self.remove_traces)
+        self.refresh()
+
+    def build_rows(self):
+        """ A row for each field of the report. """
+        self.empty = tk.Label(self.rows, text=EMPTY, anchor="w", justify="left", width=1,
+                              bg=PAPER, fg=HINT, font=themes.sans(11))
+        self.empty.bind("<Configure>", self.wrap_value)
+        self.empty.grid(row=0, column=0, columnspan=3, sticky="ew")
+        fields = [name for name in CASE_KEYS.values() if not name.startswith("logo_")]
+
+        # The logo is in a cell of its own, as high as all the rows
+        self.logo_cell = LogoCell(self.rows)
+        self.logo_cell.grid(row=1, column=0, rowspan=len(fields), sticky="nsew")
+        self.logo_cell.grid_remove()
+
+        self.cells = {}
+        for line, name in enumerate(fields):
+            key = next(key for key, field in CASE_KEYS.items() if field == name)
+            cells = []
+            for column, wrap in enumerate((KEY_WIDTH, VALUE_WIDTH)):
+                cell = tk.Frame(self.rows, bg=PAPER, highlightthickness=1,
+                                highlightbackground=GRID, highlightcolor=GRID)
+                cell.grid(row=line + 1, column=column + 1, sticky="nsew")
+                label = tk.Label(cell, text=key if column == 0 else "", anchor="w", justify="left",
+                                 wraplength=wrap, bg=PAPER, fg=INK, font=themes.sans(11))
+                label.pack(fill="both", expand=True, padx=6, pady=4)
+                if column == 1:
+                    label.configure(width=1)
+                    label.bind("<Configure>", self.wrap_value)
+                cells.append((cell, label))
+            self.cells[name] = cells
+
+    @staticmethod
+    def wrap_value(event):
+        """ Break the lines of a text where the room for it in the widget ends. """
+        widget = event.widget
+        margin = 2 * sum(int(widget.cget(option)) for option in ("borderwidth", "padx", "highlightthickness"))
+        wraplength = max(event.width - margin, 1)
+        if int(widget.cget("wraplength")) != wraplength:
+            widget.configure(wraplength=wraplength)
+
+    def refresh_logo(self, *_args):
+        """ Show the agency logo in its cell, or hide the cell when there is no picture. """
+        width = min(max(self.rows.winfo_width() // LOGO_SHARE - 14, LOGO_MIN_WIDTH), LOGO_MAX_WIDTH)
+        shown = self.logo_cell.show(self.case.logo_base64.get(), width)
+        if shown:
+            self.logo_cell.grid()
+        else:
+            self.logo_cell.grid_remove()
+        return shown
+
+    def refresh(self, *_args):
+        """ Show a row for each field with something in it, in the order of the report. """
+        filled = self.refresh_logo()
+        for name, cells in self.cells.items():
+            value = getattr(self.case, name).get().strip()
+            if len(value) > MAX_SHOWN:
+                value = value[:MAX_SHOWN].rstrip() + "…"
+            for cell, _label in cells:
+                if value:
+                    cell.grid()
+                else:
+                    cell.grid_remove()
+            cells[1][1].configure(text=value)
+            filled = filled or bool(value)
+        if filled:
+            self.empty.grid_remove()
+        else:
+            self.empty.grid()
+
+    def remove_traces(self, event):
+        """ Stop watching the variables. """
+        if event.widget is self:
+            for variable, trace in self.traces:
+                variable.trace_remove("write", trace)

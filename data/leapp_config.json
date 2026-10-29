@@ -10,6 +10,7 @@
     "dark": {
       "border": "#565556",
       "button_border": "#3e4047",
+      "card_accent": "#33161C",
       "card_bg": "#191A1E",
       "header_bg": "#FC3E69",
       "input_bg": "#0E0F11",
@@ -22,18 +23,19 @@
       "text_secondary": "#A7A29B"
     },
     "light": {
-      "border": "#B4AEA4",
-      "button_border": "#B4AEA4",
+      "border": "#A3B0C2",
+      "button_border": "#A3B0C2",
+      "card_accent": "#FAEAE4",
       "card_bg": "#FFFFFF",
       "header_bg": "#FC3E69",
-      "input_bg": "#FAF7F1",
-      "line": "#E2DCD1",
-      "main_bg": "#FAF7F1",
+      "input_bg": "#F8FAFC",
+      "line": "#D5DDE9",
+      "main_bg": "#F8FAFC",
       "progress": "#F5161F",
       "text_leapp_color": "#C4101A",
-      "text_legend": "#857F77",
-      "text_primary": "#171614",
-      "text_secondary": "#6D675F"
+      "text_legend": "#738195",
+      "text_primary": "#101720",
+      "text_secondary": "#5A697D"
     }
   }
 }

@@ -11,6 +11,7 @@ HEX_COLOUR = re.compile(r"#[0-9A-Fa-f]{6}")
 ROLES = frozenset((
     "border",  # A card's border, an input's border with the focus, the line above the status bar
     "button_border",  # The border of a quiet button and of a button in a card
+    "card_accent",  # The background of the report preview card, which shows what the report will hold
     "card_bg",  # The background of a card and of its labels
     "header_bg",  # The header background color, identical in both themes
     "input_bg",  # The background of an input
