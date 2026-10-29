@@ -166,8 +166,7 @@ class LogoCell(tk.Frame):
     """ The cell of the table that holds the agency logo. """
 
     def __init__(self, parent):
-        super().__init__(parent, bg=PAPER, highlightthickness=1, highlightbackground=GRID,
-                         highlightcolor=GRID)
+        super().__init__(parent, bg=PAPER)
         self.label = tk.Label(self, bg=PAPER, borderwidth=0)
         self.label.pack(expand=True, padx=6, pady=4)
         self.picture = None
@@ -198,8 +197,10 @@ class ReportPreview(tk.Frame):
         inner.pack(fill="x", padx=12, pady=12)
         tk.Label(inner, text="Case Information", anchor="w", bg=PAPER, fg=INK,
                  font=themes.sans(15, "bold")).pack(fill="x", pady=(0, 8))
-        self.rows = tk.Frame(inner, bg=PAPER)
-        self.rows.pack(fill="x")
+        self.table = tk.Frame(inner, bg=GRID)
+        self.table.pack(fill="x")
+        self.rows = tk.Frame(self.table, bg=GRID)
+        self.rows.pack(fill="x", padx=(0, 1), pady=(0, 1))
         self.rows.columnconfigure(2, weight=1)
         self.build_rows()
         self.rows.bind("<Configure>", self.refresh_logo)
@@ -218,15 +219,14 @@ class ReportPreview(tk.Frame):
 
     def build_rows(self):
         """ A row for each field of the report. """
-        self.empty = tk.Label(self.rows, text=EMPTY, anchor="w", justify="left", width=1,
+        self.empty = tk.Label(self.table.master, text=EMPTY, anchor="w", justify="left", width=1,
                               bg=PAPER, fg=HINT, font=themes.sans(11))
         self.empty.bind("<Configure>", self.wrap_value)
-        self.empty.grid(row=0, column=0, columnspan=3, sticky="ew")
         fields = [name for name in CASE_KEYS.values() if not name.startswith("logo_")]
 
         # The logo is in a cell of its own, as high as all the rows
         self.logo_cell = LogoCell(self.rows)
-        self.logo_cell.grid(row=1, column=0, rowspan=len(fields), sticky="nsew")
+        self.logo_cell.grid(row=1, column=0, rowspan=len(fields), sticky="nsew", padx=(1, 0), pady=(1, 0))
         self.logo_cell.grid_remove()
 
         self.cells = {}
@@ -234,9 +234,8 @@ class ReportPreview(tk.Frame):
             key = next(key for key, field in CASE_KEYS.items() if field == name)
             cells = []
             for column, wrap in enumerate((KEY_WIDTH, VALUE_WIDTH)):
-                cell = tk.Frame(self.rows, bg=PAPER, highlightthickness=1,
-                                highlightbackground=GRID, highlightcolor=GRID)
-                cell.grid(row=line + 1, column=column + 1, sticky="nsew")
+                cell = tk.Frame(self.rows, bg=PAPER)
+                cell.grid(row=line + 1, column=column + 1, sticky="nsew", padx=(1, 0), pady=(1, 0))
                 label = tk.Label(cell, text=key if column == 0 else "", anchor="w", justify="left",
                                  wraplength=wrap, bg=PAPER, fg=INK, font=themes.sans(11))
                 label.pack(fill="both", expand=True, padx=6, pady=4)
@@ -268,8 +267,9 @@ class ReportPreview(tk.Frame):
     def refresh(self, *_args):
         """ Show a row for each field with something in it, in the order of the report. """
         filled = self.refresh_logo()
-        for name, cells in self.cells.items():
+        for row, (name, cells) in enumerate(self.cells.items(), start=1):
             value = getattr(self.case, name).get().strip()
+            self.rows.rowconfigure(row, weight=1 if value else 0)
             if len(value) > MAX_SHOWN:
                 value = value[:MAX_SHOWN].rstrip() + "…"
             for cell, _label in cells:
@@ -279,10 +279,15 @@ class ReportPreview(tk.Frame):
                     cell.grid_remove()
             cells[1][1].configure(text=value)
             filled = filled or bool(value)
+        lines = GRID if any(getattr(self.case, name).get().strip() for name in self.cells) else PAPER
+        self.table.configure(bg=lines)
+        self.rows.configure(bg=lines)
         if filled:
-            self.empty.grid_remove()
+            self.empty.pack_forget()
+            self.table.pack(fill="x")
         else:
-            self.empty.grid()
+            self.table.pack_forget()
+            self.empty.pack(fill="x")
 
     def remove_traces(self, event):
         """ Stop watching the variables. """
