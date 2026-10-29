@@ -12,9 +12,24 @@ from leapp_functions import leapp
 from leapp_functions.app.gui import images, themes
 from leapp_functions.app.gui.app_state import AppState
 from leapp_functions.app.gui.header import Header
-from leapp_functions.app.gui.steps import Steps
+from leapp_functions.app.gui.steps import STAGES, Steps
 from leapp_functions.app.gui.case import CaseScreen
 from leapp_functions.app.gui.status_bar import StatusBar
+
+MIN_SIZE = (900, 700)
+
+TITLES = {key: title for key, title, _icon in STAGES} | {"review": "Review"}
+
+
+class PlaceholderScreen(tk.Frame):
+    """ An empty screen with its title, until the screen is built. """
+
+    def __init__(self, parent, app):
+        super().__init__(parent, bg=app.colors.main_bg)
+        tk.Label(self, text=TITLES[app.app_state.step], bg=app.colors.main_bg,
+                 fg=app.colors.text_primary, font=themes.sans(28, "bold")).place(
+                     relx=0.5, rely=0.4, anchor="center")
+
 
 SCREENS = {'case': CaseScreen}
 
@@ -28,7 +43,7 @@ class MainWindow(tk.Tk):
         self.title(f"{leapp.name} version {leapp.version}")
         self.icon = images.load("icon.png")
         self.iconphoto(True, self.icon)
-        self.minsize(900, 700)
+        self.minsize(*MIN_SIZE)
 
         self.app_state = AppState(self.refresh_steps)
         self.appearance = themes.Appearance(leapp.theme)
@@ -48,9 +63,17 @@ class MainWindow(tk.Tk):
         self.widgets = {}
 
         self.build()
+        self.fix_size()
         if sys.platform == "darwin":
             # the window has to be on screen first
             self.after(300, self.redraw)
+
+    def fix_size(self):
+        """ Give the window the size its first screen asks for """
+        self.update_idletasks()
+        width = max(self.winfo_reqwidth(), MIN_SIZE[0])
+        height = max(self.winfo_reqheight(), MIN_SIZE[1])
+        self.geometry(f"{width}x{height}")
 
     def redraw(self):
         """ On macOS, a window opened from a terminal stays empty until it is clicked:
@@ -59,7 +82,6 @@ class MainWindow(tk.Tk):
         self.geometry(f"{width + 1}x{height}")
         self.update_idletasks()
         self.geometry(f"{width}x{height}")
-        self.geometry("")
 
         self.activate_application()
 
@@ -114,10 +136,7 @@ class MainWindow(tk.Tk):
         if old is not None:
             old.destroy()
         step = self.app_state.step
-        if step in SCREENS:
-            screen = SCREENS[step](self.body_frame, self)
-        else:
-            screen = tk.Frame(self.body_frame, bg="#222222")
+        screen = SCREENS.get(step, PlaceholderScreen)(self.body_frame, self)
         screen.grid(row=1, column=0, sticky='nsew')
         self.widgets["screen"] = screen
 
@@ -129,6 +148,7 @@ class MainWindow(tk.Tk):
         if state.can_go(step):
             state.left.add(state.step)
             state.step = step
+            self.show_screen()
             self.refresh_steps()
 
     def go_back(self):
