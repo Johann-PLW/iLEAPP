@@ -3,7 +3,7 @@ The Source screen: the extraction to parse, where the keychain and the report go
 """
 
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, ttk
 
 from leapp_functions import leapp
 from leapp_functions.app import history, input_type
@@ -27,6 +27,7 @@ class SourceScreen(tk.Frame):
         super().__init__(parent, bg=app.colors.main_bg)
         self.app = app
         self.state = app.app_state
+        self.single_file = None
 
         main, side = two_columns(self, app)
         self.build_extraction(main)
@@ -54,10 +55,31 @@ class SourceScreen(tk.Frame):
             created[text].pack(side="left", padx=(0, 8))
         self.recent_button = created["Recent ▾"]
 
+        if "file" in input_type.SUPPORTED:
+            self.build_single_file(card.body)
+
         Caption(card.body, self.app, leapp.source_hint, card.background).grid(
-            row=2, column=0, sticky="ew", pady=(12, 0))
+            row=3, column=0, sticky="ew", pady=(12, 0))
 
         self.recent_menu = tk.Menu(self, tearoff=0)
+
+    def build_single_file(self, body):
+        """ The box that has one file read as it is (-t file). """
+        self.single_file = ttk.Checkbutton(body, text="Read as a single file", style="Card.TCheckbutton",
+                                           variable=self.state.run.single_file)
+        self.single_file.grid(row=2, column=0, sticky="w", pady=(12, 0))
+        self.allow_single_file()
+
+        variable = self.state.run.source
+        trace = variable.trace_add("write", lambda *_args: self.allow_single_file())
+        self.single_file.bind("<Destroy>", lambda _event: variable.trace_remove("write", trace))
+
+    def allow_single_file(self):
+        """ The box can be ticked only when the source is one file. """
+        one_file = self.state.is_one_file()
+        if not one_file and self.state.run.single_file.get():
+            self.state.run.single_file.set(False)
+        self.single_file.state(["!disabled" if one_file else "disabled"])
 
     def focus_input(self):
         """ Put the cursor in the source field: Ctrl+I """
@@ -141,9 +163,10 @@ class DetectedCard(tk.Frame):
         self.unlock_panel.pack(fill="x")
 
         self.pending = None
-        variable = app.app_state.run.source
-        trace = variable.trace_add("write", lambda *_args: self.schedule())
-        self.bind("<Destroy>", lambda _event: self.stop(variable, trace))
+        run = app.app_state.run
+        traces = [(variable, variable.trace_add("write", lambda *_args: self.schedule()))
+                  for variable in (run.source, run.single_file)]
+        self.bind("<Destroy>", lambda _event: self.stop(traces))
         self.refresh()
 
     def schedule(self):
@@ -152,9 +175,10 @@ class DetectedCard(tk.Frame):
             self.after_cancel(self.pending)
         self.pending = self.after(DETECT_DELAY, self.refresh)
 
-    def stop(self, variable, trace):
-        """ The card is destroyed: the field is no longer watched for it. """
-        variable.trace_remove("write", trace)
+    def stop(self, traces):
+        """ The card is destroyed: the source is no longer watched for it. """
+        for variable, trace in traces:
+            variable.trace_remove("write", trace)
         if self.pending is not None:
             self.after_cancel(self.pending)
 

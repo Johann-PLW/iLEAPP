@@ -5,6 +5,7 @@ has to outlive them, such as the case data typed so far, lives here.
 """
 
 import base64
+import os
 import tkinter as tk
 from types import SimpleNamespace
 
@@ -34,7 +35,7 @@ class AppState:
                                     logo_mimetype=tk.StringVar(), logo_base64=tk.StringVar())
 
         self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar(), selection=[],
-                                   detected=None, unlock=None)
+                                   single_file=tk.BooleanVar(), detected=None, unlock=None)
         self.selected_artifacts = set()
 
         self.run_status = "idle"  # "idle" until a run starts, then "running", then "finished"
@@ -80,6 +81,11 @@ class AppState:
         self.run.selection = paths if len(paths) > 1 else []
         self.run.source.set(selection_text(paths))
 
+    def is_one_file(self):
+        """ Whether the source is one file: only then can it be read as a single file. """
+        paths = self.source_paths()
+        return len(paths) == 1 and os.path.isfile(paths[0])
+
     def source_paths(self):
         """ The input the source field stands for. """
         return [path for path in selected_paths(self.run.source.get().strip(), self.run.selection)
@@ -87,7 +93,7 @@ class AppState:
 
     def detect_source(self):
         """ Look at the source. """
-        detected = input_type.detect(self.source_paths())
+        detected = input_type.detect(self.source_paths(), single_file=self.run.single_file.get())
         if detected != self.run.detected:
             self.run.detected = detected
             self.start_unlock()

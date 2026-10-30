@@ -29,12 +29,13 @@ FORMAT_NAMES = {"EWF": "E01", "EWF2": "Ex01", "UDIF": "DMG", "DMG_ENCRYPTED": "e
                 "AD_ENCRYPTED": "encrypted AD1"}
 
 
-def detect(paths, supported=SUPPORTED):
+def detect(paths, supported=SUPPORTED, single_file=False):
     """
     Detect the file type. Nothing is opened beyond the first bytes of a file.
     Args:
         paths (list): the paths of the source field, several for the images of a RAID set.
         supported (frozenset): the -t values this LEAPP reads.
+        single_file (bool): one file is to be read as it is (-t file), if this LEAPP can.
     Returns:
         Detected, or None when there is no path.
     """
@@ -50,7 +51,7 @@ def detect(paths, supported=SUPPORTED):
         return detect_image(path)
     if os.path.isdir(path):
         return detect_folder(path, supported)
-    return detect_file(path)
+    return detect_single_file(path) if single_file and "file" in supported else detect_file(path)
 
 
 def detect_images(paths):
@@ -163,6 +164,16 @@ def detect_file(path):
         note = (f"Its name says {LABELS[by_name]}, its content {LABELS[by_content]}: "
                 "it is read as its content.")
     return Detected(kind, LABELS[kind], note)
+
+
+def detect_single_file(path):
+    """ A file read as it is, even an archive or a disk image: it is not opened. """
+    note = "Only the artifacts that look for a file of this name read it."
+    looks = detect_file(path)
+    if looks.kind:
+        label = looks.label[0].lower() + looks.label[1:]
+        note = f"It looks like a {label}, but it is read as it is, not opened. {note}"
+    return Detected("file", "Single file", note)
 
 
 def unreadable(error):

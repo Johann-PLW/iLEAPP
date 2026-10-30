@@ -7,7 +7,15 @@ for each LEAPP, so that this module can stay the same in all of them.
 import re
 import sys
 
+from PIL import ImageTk
+
+from leapp_functions.app.gui import images
+
 HEX_COLOUR = re.compile(r"#[0-9A-Fa-f]{6}")
+
+CHECK_BOX = 16
+CHECK_BOX_GAP = 8
+CHECK_BOX_PICTURES = {}
 ROLES = frozenset((
     "border",  # A card's border, an input's border with the focus, the line above the status bar
     "button_border",  # The border of a quiet button and of a button in a card
@@ -87,7 +95,7 @@ def mono(size, weight="normal"):
 
 
 def apply_styles(style, colors):
-    """ Give the ttk buttons the colours of a palette. """
+    """ Give the ttk buttons and check boxes the colours of a palette. """
     for name, background, foreground, disabled, hover, hover_text in (
             ("Primary", colors.main_bg, colors.header_bg, (colors.main_bg, colors.text_legend),
              colors.main_bg, colors.text_primary),
@@ -108,3 +116,30 @@ def apply_styles(style, colors):
                   foreground=[("disabled", disabled_text), ("pressed", hover_text),
                               ("active", hover_text)],
                   bordercolor=states, lightcolor=states, darkcolor=states, focuscolor=states)
+    style_check_box(style, colors)
+
+
+def style_check_box(style, colors):
+    """ A check box in a card. """
+    pictures = {state: images.check_box_image(CHECK_BOX, box_colors, CHECK_BOX_GAP)
+                for state, box_colors in (
+                    ("off", (colors.input_bg, colors.border, None)),
+                    ("on", (colors.input_bg, colors.border, colors.text_primary)),
+                    ("disabled", (colors.card_bg, colors.line, None)))}
+    if "Tick.indicator" in style.element_names():
+        for state, picture in pictures.items():
+            CHECK_BOX_PICTURES[state].paste(picture)
+    else:
+        for state, picture in pictures.items():
+            CHECK_BOX_PICTURES[state] = ImageTk.PhotoImage(picture, master=style.master)
+        style.element_create("Tick.indicator", "image", CHECK_BOX_PICTURES["off"],
+                             ("disabled", CHECK_BOX_PICTURES["disabled"]),
+                             ("selected", CHECK_BOX_PICTURES["on"]), sticky="")
+    style.layout("Card.TCheckbutton", [("Checkbutton.padding", {"sticky": "nswe", "children": [
+        ("Tick.indicator", {"side": "left", "sticky": ""}),
+        ("Checkbutton.focus", {"side": "left", "sticky": "w",
+                               "children": [("Checkbutton.label", {"sticky": "nswe"})]})]})])
+    style.configure("Card.TCheckbutton", background=colors.card_bg, foreground=colors.text_primary,
+                    font=sans(12), focuscolor=colors.card_bg)
+    style.map("Card.TCheckbutton", background=[("active", colors.card_bg)],
+              foreground=[("disabled", colors.text_legend)])
