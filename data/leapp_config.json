@@ -6,6 +6,7 @@
   "objective": "Triage iOS Full File System and iTunes Backup Extractions.",
   "profile_extension": ".ilprofile",
   "casedata_extension": ".lcasedata",
+  "source_hint": "A tar, zip or gz archive, a disk image (raw image, E01, AFF, DMG or virtual disk, L01 or AD1), or a folder holding an iOS full file system extraction or a backup. Several disk images of a RAID set can be picked together.",
   "theme": {
     "dark": {
       "border": "#565556",

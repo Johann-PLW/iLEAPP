@@ -9,6 +9,7 @@ import tkinter as tk
 from types import SimpleNamespace
 
 from scripts.filetype import guess_mime
+from scripts.raw_image import selected_paths, selection_text
 
 ORDER = ("case", "source", "artifacts", "review", "run", "results")
 STAGE_OF = {"review": "run"}
@@ -30,7 +31,7 @@ class AppState:
                                     notes=tk.StringVar(), logo_path=tk.StringVar(),
                                     logo_mimetype=tk.StringVar(), logo_base64=tk.StringVar())
 
-        self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar())
+        self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar(), selection=[])
         self.selected_artifacts = set()
 
         self.run_status = "idle"  # "idle" until a run starts, then "running", then "finished"
@@ -69,6 +70,17 @@ class AppState:
         self.case.logo_path.set(path)
         self.case.logo_mimetype.set(mimetype)
         self.case.logo_base64.set(encoded)
+
+    def set_source(self, paths):
+        """ Show the files picked in the source field: one path, or the first and how many more. """
+        paths = list(paths)
+        self.run.selection = paths if len(paths) > 1 else []
+        self.run.source.set(selection_text(paths))
+
+    def source_paths(self):
+        """ The input the source field stands for. """
+        return [path for path in selected_paths(self.run.source.get().strip(), self.run.selection)
+                if path]
 
     def stage(self):
         """The step of the five under the header that the screen on show belongs to."""

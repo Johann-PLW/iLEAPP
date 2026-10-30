@@ -1,4 +1,6 @@
-"""The Case screen: the data of the case, which only decorates the header of the report."""
+"""
+The Case screen: the data of the case, which only decorates the header of the report.
+"""
 
 import tkinter as tk
 from tkinter import filedialog, messagebox
@@ -6,12 +8,11 @@ from tkinter import filedialog, messagebox
 from leapp_functions import leapp
 from leapp_functions.app.gui import images, themes
 from leapp_functions.app.gui.app_state import CASE_KEYS
-from leapp_functions.app.gui.custom_widgets import Card, Field, FileField, LabeledEntry, OutlineButton
+from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, Field, FileField,
+                                                    LabeledEntry, OutlineButton, two_columns,
+                                                    wrap_to_width)
 from leapp_functions.data_sources.json_files import (get_json_file_content,
-                                                    save_content_to_json_file)
-
-SIDE_WIDTH = 300
-GAP = 14
+                                                     save_content_to_json_file)
 
 # Report preview colors whatever the window's palette is.
 PAPER = "#FFFFFF"
@@ -37,16 +38,10 @@ class CaseScreen(tk.Frame):
         self.app = app
         self.state = app.app_state
 
-        self.columnconfigure(0, weight=2, uniform="case")
-        self.columnconfigure(1, weight=1, uniform="case", minsize=SIDE_WIDTH)
-
-        main = tk.Frame(self, bg=app.colors.main_bg)
-        main.grid(row=0, column=0, sticky="new")
-        main.columnconfigure(0, weight=1)
-
+        main, side = two_columns(self, app)
         self.build_cards(main)
         self.build_buttons(main)
-        self.build_preview()
+        self.build_preview(side)
         self.watch_case()
 
     def build_cards(self, main):
@@ -87,10 +82,10 @@ class CaseScreen(tk.Frame):
             buttons[text].pack(side="left", padx=(0, 10))
         self.clear_button = buttons["Clear"]
 
-    def build_preview(self):
+    def build_preview(self, side):
         """ The card on the right: what the fields give in the Case Information part of the HTML report. """
-        self.preview = ReportPreview(self, self.app)
-        self.preview.grid(row=0, column=1, sticky="new", padx=(GAP, 0))
+        self.preview = ReportPreview(side, self.app)
+        self.preview.pack(fill="x")
 
     def watch_case(self):
         """ Clear is only available while a field holds something. """
@@ -205,11 +200,7 @@ class ReportPreview(tk.Frame):
         self.build_rows()
         self.rows.bind("<Configure>", self.refresh_logo)
 
-        caption = tk.Label(card.body, text=CAPTION, anchor="w", justify="left", width=1,
-                           bg=card.background, fg=app.colors.text_secondary,
-                           font=themes.sans(11))
-        caption.pack(fill="x", pady=(10, 0))
-        caption.bind("<Configure>", self.wrap_value)
+        Caption(card.body, app, CAPTION, card.background).pack(fill="x", pady=(10, 0))
 
         # What is typed shows at once
         self.traces = [(variable, variable.trace_add("write", self.refresh))
@@ -221,7 +212,7 @@ class ReportPreview(tk.Frame):
         """ A row for each field of the report. """
         self.empty = tk.Label(self.table.master, text=EMPTY, anchor="w", justify="left", width=1,
                               bg=PAPER, fg=HINT, font=themes.sans(11))
-        self.empty.bind("<Configure>", self.wrap_value)
+        self.empty.bind("<Configure>", wrap_to_width)
         fields = [name for name in CASE_KEYS.values() if not name.startswith("logo_")]
 
         # The logo is in a cell of its own, as high as all the rows
@@ -241,18 +232,9 @@ class ReportPreview(tk.Frame):
                 label.pack(fill="both", expand=True, padx=6, pady=4)
                 if column == 1:
                     label.configure(width=1)
-                    label.bind("<Configure>", self.wrap_value)
+                    label.bind("<Configure>", wrap_to_width)
                 cells.append((cell, label))
             self.cells[name] = cells
-
-    @staticmethod
-    def wrap_value(event):
-        """ Break the lines of a text where the room for it in the widget ends. """
-        widget = event.widget
-        margin = 2 * sum(int(widget.cget(option)) for option in ("borderwidth", "padx", "highlightthickness"))
-        wraplength = max(event.width - margin, 1)
-        if int(widget.cget("wraplength")) != wraplength:
-            widget.configure(wraplength=wraplength)
 
     def refresh_logo(self, *_args):
         """ Show the agency logo in its cell, or hide the cell when there is no picture. """

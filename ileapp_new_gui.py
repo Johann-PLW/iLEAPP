@@ -14,6 +14,7 @@ from leapp_functions.app.gui.app_state import AppState
 from leapp_functions.app.gui.header import Header
 from leapp_functions.app.gui.steps import STAGES, Steps
 from leapp_functions.app.gui.case import CaseScreen
+from leapp_functions.app.gui.source import SourceScreen
 from leapp_functions.app.gui.status_bar import StatusBar
 
 MIN_SIZE = (900, 700)
@@ -31,7 +32,7 @@ class PlaceholderScreen(tk.Frame):
                      relx=0.5, rely=0.4, anchor="center")
 
 
-SCREENS = {'case': CaseScreen}
+SCREENS = {"case": CaseScreen, "source": SourceScreen}
 
 
 class MainWindow(tk.Tk):
@@ -56,6 +57,8 @@ class MainWindow(tk.Tk):
         else:
             # Other platforms: Ctrl,
             self.bind_all("<Control-comma>", lambda _event: self.open_settings())
+
+        self.bind("<Control-i>", lambda _event: self.focus_field("focus_input"))
 
         self.header = None
         self.body_frame = None
@@ -176,6 +179,12 @@ class MainWindow(tk.Tk):
         for name in ("steps", "status_bar"):
             if name in self.widgets:
                 self.widgets[name].refresh()
+
+    def focus_field(self, method):
+        """ Ask the screen on show to put the cursor in one of its fields, if it has that field. """
+        action = getattr(self.widgets.get("screen"), method, None)
+        if action is not None:
+            action()
 
     def open_settings(self):
         """ Settings window, not yet available. """

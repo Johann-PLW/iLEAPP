@@ -13,6 +13,8 @@ BORDER = 2
 TOOLTIP_DELAY = 500
 TOOLTIP_WIDTH = 520
 INFO_SIZE = 14
+SIDE_WIDTH = 300
+GAP = 14
 
 Field = namedtuple("Field", "label variable mono pick", defaults=(False, None))
 
@@ -129,6 +131,39 @@ class Card(tk.Frame):
         self.body.pack(fill="both", expand=True)
 
 
+def two_columns(screen, app):
+    """ Lay a screen out in a main column on the left and a side column on the right.
+    Returns the frame of each, where the screen builds its widgets. """
+    screen.columnconfigure(0, weight=2, uniform="column")
+    screen.columnconfigure(1, weight=1, uniform="column", minsize=SIDE_WIDTH)
+
+    main = tk.Frame(screen, bg=app.colors.main_bg)
+    main.grid(row=0, column=0, sticky="new")
+    main.columnconfigure(0, weight=1)
+
+    side = tk.Frame(screen, bg=app.colors.main_bg)
+    side.grid(row=0, column=1, sticky="new", padx=(GAP, 0))
+    return main, side
+
+
+def wrap_to_width(event):
+    """ Break the lines of a text where the room for it in the widget ends. """
+    widget = event.widget
+    margin = 2 * sum(int(widget.cget(option)) for option in ("borderwidth", "padx", "highlightthickness"))
+    wraplength = max(event.width - margin, 1)
+    if int(widget.cget("wraplength")) != wraplength:
+        widget.configure(wraplength=wraplength)
+
+
+class Caption(tk.Label):
+    """ A small text in the secondary colour, on as many lines as it needs. """
+
+    def __init__(self, parent, app, text, background):
+        super().__init__(parent, text=text, anchor="w", justify="left", width=1, bg=background,
+                         fg=app.colors.text_secondary, font=themes.sans(11))
+        self.bind("<Configure>", wrap_to_width)
+
+
 class LabeledEntry(tk.Frame):
     """A small label above a field to type in."""
 
@@ -181,7 +216,7 @@ class FileField(tk.Frame):
         # The line of the label is as high as the icon, with or without it: nothing jumps
         self.labeled.rowconfigure(0, minsize=INFO_SIZE)
         self.info.image = images.load_disc_icon("info-small", INFO_SIZE, colors.text_secondary,
-                                               colors.card_bg)
+                                                colors.card_bg)
         self.info.configure(image=self.info.image)
 
         # The entry shows the name only: the tooltip gives the whole path. The pointer on the
