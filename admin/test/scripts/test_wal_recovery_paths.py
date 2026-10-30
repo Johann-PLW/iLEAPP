@@ -1,0 +1,147 @@
+"""Write-ahead log recovery in artifacts must find the log beside a path with a space.
+
+scripts/sqlite_wal.py takes a file system path and builds its own SQLite URI. A path that
+has already been turned into a URI fragment (get_sqlite_db_path percent-encodes spaces) is
+not a file name: the reader then sees no -wal and recovers nothing, without an error.
+Every database here sits in a folder whose name has a space, as a case folder often does.
+"""
+import os
+import shutil
+import sqlite3
+import sys
+import tempfile
+import unittest
+
+
+ROOT_DIR = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+from scripts.artifacts import discordServers, googleChat, life360, snapchat  # pylint: disable=wrong-import-position
+from scripts.artifacts import googlePhotos  # pylint: disable=wrong-import-position
+
+
+def _capture(folder, name, statements):
+    """Run statements in WAL mode and copy the database and its log out while the writer
+    is still open, since closing it checkpoints the log away."""
+    live = os.path.join(folder, 'live')
+    evidence = os.path.join(folder, 'case folder with space')
+    os.makedirs(live)
+    os.makedirs(evidence)
+    connection = sqlite3.connect(os.path.join(live, name), isolation_level=None)
+    connection.execute('PRAGMA journal_mode=WAL')
+    connection.execute('PRAGMA wal_autocheckpoint=0')
+    for statement in statements:
+        connection.execute(statement)
+    for suffix in ('', '-wal'):
+        shutil.copyfile(os.path.join(live, name + suffix), os.path.join(evidence, name + suffix))
+    connection.close()
+    return os.path.join(evidence, name)
+
+
+class WalRecoveryPathTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_snapchat_messages_found_beside_a_path_with_a_space(self):
+        path = _capture(self.tmp, 'arroyo.db', [
+            'CREATE TABLE m (conv TEXT, id INTEGER, txt TEXT)',
+            "INSERT INTO m VALUES ('c', 1, 'kept')",
+            "INSERT INTO m VALUES ('c', 2, 'removed')",
+            'DELETE FROM m WHERE id = 2'])
+        removed = snapchat._removed_in_log(  # pylint: disable=protected-access
+            path, 'SELECT conv, id, txt FROM m', (0, 1), {('c', 1)})
+        self.assertEqual([row for row, _spans in removed], [('c', 2, 'removed')])
+
+    def test_snapchat_conversations_found_beside_a_path_with_a_space(self):
+        path = _capture(self.tmp, 'arroyo.db', [
+            'CREATE TABLE conversation (client_conversation_id TEXT)',
+            'CREATE TABLE feed_entry (client_conversation_id TEXT)',
+            "INSERT INTO conversation VALUES ('kept')",
+            "INSERT INTO conversation VALUES ('gone')",
+            "DELETE FROM conversation WHERE client_conversation_id = 'gone'"])
+        removed = snapchat._removed_conversation_ids(path)  # pylint: disable=protected-access
+        self.assertEqual(set(removed), {'gone'})
+
+    def test_snapchat_memories_found_beside_a_path_with_a_space(self):
+        path = _capture(self.tmp, 'scdb-27.sqlite3', [
+            'CREATE TABLE ZGALLERYSNAP (Z_PK INTEGER PRIMARY KEY, ZSNAPID TEXT, ZENTRY INTEGER)',
+            "INSERT INTO ZGALLERYSNAP VALUES (1, 'kept', NULL)",
+            "INSERT INTO ZGALLERYSNAP VALUES (2, 'gone', NULL)",
+            'DELETE FROM ZGALLERYSNAP WHERE Z_PK = 2'])
+        records = snapchat._memory_records_in_log(path, {'kept'})  # pylint: disable=protected-access
+        self.assertEqual(set(records), {'gone'})
+
+    def test_google_photos_rows_found_beside_a_path_with_a_space(self):
+        path = _capture(self.tmp, 'photos-shared.db', [
+            'CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)',
+            "INSERT INTO t VALUES (1, 'kept')",
+            "INSERT INTO t VALUES (2, 'gone')",
+            'DELETE FROM t WHERE id = 2'])
+        found = googlePhotos._rows_in_log(path)  # pylint: disable=protected-access
+        self.assertEqual([(table, row) for table, _c, _i, _d, row, _s, _cur in found],
+                         [('t', (2, b'gone'))])
+
+    def test_discord_messages_found_beside_a_path_with_a_space(self):
+        # messages0 has no primary key, only a unique index on a..f. A row rewritten in
+        # place is the same message and must not come back; a removed key must.
+        path = _capture(self.tmp, 'a', [
+            'CREATE TABLE messages0 (a, b, c, d, e, f, data, generation)',
+            'CREATE UNIQUE INDEX messages0_by_key on messages0 (a, b, c, d, e, f)',
+            "INSERT INTO messages0 VALUES ('m', 'g', 'c', '1', '', '', 'one', 1)",
+            "INSERT INTO messages0 VALUES ('m', 'g', 'c', '2', '', '', 'two', 1)",
+            "INSERT OR REPLACE INTO messages0 VALUES ('m', 'g', 'c', '1', '', '', 'one again', 2)",
+            "DELETE FROM messages0 WHERE d = '2'"])
+        removed = discordServers.discord_removed_messages(path)
+        self.assertEqual([data for data, _method, _location in removed], ['two'])
+    def test_life360_chat_messages_found_beside_a_path_with_a_space(self):
+        # A message is its ZCHATMESSAGE Z_PK: a row whose message is still current is not
+        # reported again, a removed message is, with its sender joined from its own state.
+        path = _capture(self.tmp, 'Messaging.sqlite', [
+            'CREATE TABLE ZCHATMEMBER (Z_PK INTEGER PRIMARY KEY, ZFIRSTNAME TEXT)',
+            'CREATE TABLE ZCHATMESSAGE (Z_PK INTEGER PRIMARY KEY, ZSENDER INTEGER, ZTEXT TEXT)',
+            "INSERT INTO ZCHATMEMBER VALUES (1, 'a')",
+            "INSERT INTO ZCHATMESSAGE VALUES (1, 1, 'kept')",
+            "INSERT INTO ZCHATMESSAGE VALUES (2, 1, 'removed')",
+            "UPDATE ZCHATMESSAGE SET ZTEXT = 'kept, edited' WHERE Z_PK = 1",
+            'DELETE FROM ZCHATMESSAGE WHERE Z_PK = 2'])
+        query = ('SELECT ZTEXT, ZFIRSTNAME, ZCHATMESSAGE.Z_PK, NULL FROM ZCHATMESSAGE '
+                 'LEFT JOIN ZCHATMEMBER ON ZCHATMEMBER.Z_PK = ZSENDER')
+        removed = life360._removed_messages(path, query, {1})  # pylint: disable=protected-access
+        self.assertEqual([row for row, _method, _location in removed], [('removed', 'a', 2, None)])
+
+    def test_google_chat_messages_found_beside_a_path_with_a_space(self):
+        # A message is (group_id, topic_id, id). A removed message comes back as Recovered, the
+        # text a message held before its current row emptied it as an Earlier version, even when
+        # the emptied row no longer joins to users, and a rewrite under a new row_id with the
+        # same text not at all.
+        path = _capture(self.tmp, 'dynamite.db', [
+            'CREATE TABLE users (user_id TEXT)',
+            "INSERT INTO users VALUES ('u')",
+            'CREATE TABLE topic_messages (row_id INTEGER PRIMARY KEY AUTOINCREMENT, id TEXT, '
+            'group_id TEXT, topic_id TEXT, creator_id TEXT, text_body TEXT)',
+            'CREATE UNIQUE INDEX u ON topic_messages (group_id, topic_id, id)',
+            "INSERT INTO topic_messages (id, group_id, topic_id, creator_id, text_body) "
+            "VALUES ('1', 'g', 't', 'u', 'a')",
+            "INSERT INTO topic_messages (id, group_id, topic_id, creator_id, text_body) "
+            "VALUES ('2', 'g', 't', 'u', 'b')",
+            "INSERT INTO topic_messages (id, group_id, topic_id, creator_id, text_body) "
+            "VALUES ('3', 'g', 't', 'u', 'c')",
+            "UPDATE topic_messages SET text_body = '', creator_id = 'gone' WHERE id = '1'",
+            "DELETE FROM topic_messages WHERE id = '2'",
+            "INSERT OR REPLACE INTO topic_messages (id, group_id, topic_id, creator_id, text_body) "
+            "VALUES ('3', 'g', 't', 'u', 'c')"])
+        query = ('SELECT text_body, group_id, topic_id, id FROM topic_messages '
+                 'JOIN users ON users.user_id = topic_messages.creator_id')
+        live = googleChat._current_texts(path)  # pylint: disable=protected-access
+        rows = googleChat._rows_in_log(path, query, 0, live)  # pylint: disable=protected-access
+        self.assertEqual(sorted((row[0], origin) for row, origin, _method, _location in rows),
+                         [('a', 'Earlier version'), ('b', 'Recovered')])
+
+if __name__ == '__main__':
+    unittest.main()

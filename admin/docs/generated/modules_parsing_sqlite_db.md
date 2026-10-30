@@ -58,6 +58,7 @@ This document outlines LEAPP modules parsing SQLite databases using the new `get
 | accountData |
 | addressBook |
 | allTrails |
+| anonymousChat |
 | appStoreSearches |
 | appleAccountDeviceList |
 | appleMapsTrips |
@@ -82,6 +83,7 @@ This document outlines LEAPP modules parsing SQLite databases using the new `get
 | coinbaseWallet |
 | coverMe |
 | discordChats |
+| discordServers |
 | discord_a |
 | dubox |
 | duckduckgo |
@@ -170,6 +172,7 @@ This document outlines LEAPP modules parsing SQLite databases using the new `get
 | safariTabs |
 | safariWebsearch |
 | sbbmobile |
+| screenTimeStore |
 | secretCalculator |
 | simplex |
 | skout |
@@ -220,6 +223,7 @@ This document outlines LEAPP modules parsing SQLite databases using the new `get
 | Source Modules |
 |----------------|
 | DataUsage |
+| KeepSafe |
 | ZangiChats |
 | amazonShopping |
 | appleWalletPasses |
@@ -250,7 +254,6 @@ This document outlines LEAPP modules parsing SQLite databases using the new `get
 | gmail |
 | googleChat |
 | googleHome |
-| googlePhotos |
 | intelligencePlatformBehaviors |
 | intelligencePlatformGraph |
 | keyboard |
@@ -261,12 +264,19 @@ This document outlines LEAPP modules parsing SQLite databases using the new `get
 | kikUsersgroups |
 | knowledgeC |
 | lidl_plus |
+| life360Cache |
 | mapsSync |
+| mixpanel |
 | nest |
 | netflix |
 | odnoklassniki |
 | photosGraphMoments |
 | serialNumber |
+| smsAppPayloads |
+| smsEdits |
+| smsReactions |
+| smsRecentlyDeleted |
+| smsReplies |
 | swissmeteo |
 | teams |
 | telegramAccounts |

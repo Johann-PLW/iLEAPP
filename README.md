@@ -24,6 +24,9 @@ Download a pre-built release — no Python installation required.
 
 Each download holds one program, `ileapp`. `SHA256SUMS.txt` in each release lets you check a download.
 
+**Linux compatibility:** The official AppImages are built on Ubuntu 22.04 and need glibc 2.35 or
+newer.
+
 **GUI** — open iLEAPP the usual way: by double-clicking `ileapp.exe` from the zip on
 Windows, iLEAPP in Applications on macOS, or the AppImage on Linux. Started without arguments, it opens the window; select your input
 type, source path, output folder, and modules to process.
@@ -187,7 +190,7 @@ Releases are the easiest way to run iLEAPP. Use source if you are developing mod
 
 ### Requirements
 
-- Python 3.10 to 3.14
+- Python 3.11 to 3.15
 - Git
 
 ### Setup
@@ -240,10 +243,23 @@ An encrypted image opens with its password (`--image_password_file` or
 `--image_password_env`), or, when it is sealed to a certificate, with that certificate's
 RSA private key (`--image_private_key`). A BitLocker volume in an image opens with its
 password or recovery password, given the same way, or its startup key
-(`--bitlocker_key`, repeatable), and an APFS volume macOS encrypted in software with its
-password or personal recovery key, given the same way. At a terminal whatever is missing
-is asked for, and the GUI asks in dialogs; a BitLocker or APFS volume nothing opens is
-reported and not searched.
+(`--bitlocker_key`, repeatable), an APFS volume macOS encrypted in software with its
+password or personal recovery key, and a LUKS container with its passphrase, each given
+the same way. At a terminal whatever is missing is asked for, and the GUI asks in dialogs;
+a BitLocker, APFS or LUKS volume nothing opens is reported and not searched.
+
+The disk images of a Linux software RAID set (md, or LVM2 across disks) are read
+together: give them all to `-i` with `-t raw`, or pick them together in the GUI's file
+dialog. Given one image that holds a member, the other members are looked for in its
+folder by what each file records about itself, not by its name; the command line lists
+what it found and what it left out and why before reading the set (`--no-find-members`
+reads only the image given), and the GUI asks before reading files it found. The report
+names every image read and marks the ones found automatically. One image that holds an
+md member is read with its arrays too: a lone RAID1 member with metadata 1.1 or 1.2
+now reads its filesystem through the array, and its volume names gain the image's or
+the array's name in front. One disk given twice is read once. An image in which no
+RAID metadata is found is read as before; see `admin/docs/raw_image_input.md` for what
+qnxprobe 1.71 does with DDF, IMSM and md member images read alone.
 
 `tar` also reads an xz-compressed tar (`.tar.xz`), and the GUI picks `tar` for that
 extension. A compressed tar, `.tar.gz` included, is decompressed once into the report folder
@@ -274,6 +290,9 @@ python packaging/build.py installer    # Windows: Inno Setup installer; macOS: .
 instead. The Windows installer needs [Inno Setup](https://jrsoftware.org/isdl.php); on
 Linux, `smoke` needs a display, which `xvfb-run` provides. `python packaging/build.py --help`
 has the rest.
+
+A Linux build needs the glibc of the machine that built it, or newer. A build made on a newer
+distribution will not start on older ones; build on Ubuntu 22.04 to match the release builds.
 
 ## Code signing policy
 

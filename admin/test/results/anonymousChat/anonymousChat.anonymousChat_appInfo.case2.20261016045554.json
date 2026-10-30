@@ -1,0 +1,52 @@
+{
+  "metadata": {
+    "module_name": "anonymousChat",
+    "artifact_name": "Anonymous Chat & Fun - Application Info",
+    "function_name": "anonymousChat_appInfo",
+    "case_number": "case2",
+    "number_of_columns": 11,
+    "number_of_rows": 1,
+    "total_data_size_bytes": 128,
+    "media_checkins": 0,
+    "media_embedded_checkins": 0,
+    "input_zip_path": "admin/test/cases/data/anonymousChat/testdata.anonymousChat.anonymousChat_appInfo.case2.zip",
+    "start_time": "2026-10-16T04:55:54.882123+00:00",
+    "end_time": "2026-10-16T04:55:54.900506+00:00",
+    "run_time_seconds": 7.915496826171875e-05,
+    "last_commit": {
+      "hash": "54ed676b0f7d9b903f490b59aae5f8383bbaac99",
+      "author_name": "Brigs",
+      "author_email": "abrignoni@gmail.com",
+      "date": "2026-10-15T23:50:50-04:00",
+      "message": "Anonymous Chat: list identifying files as Application Info's source"
+    }
+  },
+  "headers": [
+    "Purchase Date",
+    "Container Type",
+    "Container ID",
+    "Bundle ID",
+    "Application Name",
+    "Version",
+    "Build",
+    "Store Item Name",
+    "Store Artist Name",
+    "Identified By",
+    "Container Path"
+  ],
+  "data": [
+    [
+      "",
+      "Data",
+      "com.anonimchat.app",
+      "com.anonimchat.app",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "iTunes backup AppDomain",
+      "private/var/mobile/Containers/Data/Application/com.anonimchat.app"
+    ]
+  ]
+}

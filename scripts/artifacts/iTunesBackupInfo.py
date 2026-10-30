@@ -19,15 +19,25 @@ __artifacts_v2__ = {
         "description": "Extract information about installed applications from the "
                        "Info.plist file of an iTunes backup. The AppleID (as stored) column "
                        "is the AppleID value of the app's download information as "
-                       "stored, and the storeCohort Date (decoded) is decoded from the digits "
-                       "after date= as Unix seconds.",
+                       "stored, and the storeCohort Date (decoded) is the ten characters after "
+                       "date= read as Unix seconds.",
         "author": "@johannplw, @AlexisBrignoni, Codex",
         "creation_date": "2023-10-11",
-        "last_update_date": "2026-10-04",
+        "last_update_date": "2026-10-16",
         "requirements": "none",
         "category": "Installed Apps",
         "notes": "The storeCohort date substring's relationship to install time is "
-                 "not documented; the value is reported as decoded.",
+                 "not documented; the value is reported as decoded. Purchase Date is the "
+                 "purchaseDate under com.apple.iTunesStore.downloadInfo in the app's "
+                 "iTunesMetadata, and Release Date is the top-level releaseDate. In the two "
+                 "corpus backups checked (iOS 13.3.1 and iOS 14.3) both are stored as ISO "
+                 "8601 text ending in Z, which is read as UTC; a plist date is also read as "
+                 "UTC. A value that carries no offset, or that does not parse as a date, is "
+                 "left blank.",
+        "sample_data": {
+            "hickman_ios13_itunes_backup": "iOS 13.3.1 | 38 rows",
+            "hickman_ios14_itunes_backup": "iOS 14.3 | 42 rows",
+        },
         "paths": ("info.plist",),
         "output_types": ["html", "tsv", "lava"],
         "artifact_icon": "package"
@@ -39,7 +49,7 @@ import datetime
 import os
 import plistlib
 from scripts.ilapfuncs import artifact_processor, get_plist_file_content, \
-    check_in_embedded_media, device_info, logfunc, iOS
+    check_in_embedded_media, convert_plist_date_to_utc, device_info, logfunc, iOS
 
 
 def _backup_info_plist(context):
@@ -93,6 +103,22 @@ def itunes_backup_info(context):
     return data_headers, data_list, recorded_source
 
 
+def _metadata_date(value):
+    """UTC datetime for an iTunesMetadata purchaseDate or releaseDate, or '' when no instant is stated.
+
+    Both are ISO 8601 text ending in Z in the two corpus backups checked. purchaseDate was a
+    plist <date>, which plistlib loads as a datetime, in the backup reported in #1950. Slicing the
+    datetime as text raised TypeError and stopped the artifact.
+    """
+    if isinstance(value, datetime.datetime):
+        return convert_plist_date_to_utc(value)  # a plist <date> is UTC
+    try:
+        parsed = datetime.datetime.fromisoformat(str(value).replace('Z', '+00:00'))
+    except (TypeError, ValueError):
+        return ''
+    return parsed.astimezone(datetime.timezone.utc) if parsed.tzinfo else ''
+
+
 @artifact_processor
 def itunes_backup_installed_applications(context):
     """ See artifact description """
@@ -135,10 +161,8 @@ def itunes_backup_installed_applications(context):
                     account_info = download_info.get('accountInfo', '')
                     if account_info:
                         apple_id = account_info.get('AppleID')
-                    purchase_date = download_info.get('purchaseDate', '')
-                    if purchase_date:
-                        purchase_date = purchase_date[:-1].replace('T', ' ')
-                release_date = itunes_metadata.get('releaseDate', '')
+                    purchase_date = _metadata_date(download_info.get('purchaseDate'))
+                release_date = _metadata_date(itunes_metadata.get('releaseDate'))
                 source_app = itunes_metadata.get('sourceApp', '')
                 auto_download = itunes_metadata.get('is-auto-download', '')
                 purchased_redownload = itunes_metadata.get('is-purchased-redownload', '')

@@ -67,7 +67,8 @@ from scripts.html_safe import esc, safe_local_path
 from scripts.lavafuncs import lava_process_artifact, lava_insert_sqlite_data, lava_iter_artifact_rows, \
     lava_get_media_item, \
     lava_insert_sqlite_media_item, lava_insert_sqlite_media_references, lava_get_media_references, \
-    lava_get_full_media_info, lava_update_record_count, bind_dates_as_text, _python_text
+    lava_get_full_media_info, lava_update_record_count, bind_dates_as_text, _python_text, \
+    lava_blank_invalid_media_refs
 
 os.path.basename = lru_cache(maxsize=None)(os.path.basename)
 
@@ -760,6 +761,12 @@ def artifact_processor(func):
 
                 # Check if headers contains a 'media' type
                 media_header_info = get_media_header_info(data_headers)
+                if media_header_info and not is_artifact_result:
+                    # Streamed rows are checked as they are written to LAVA
+                    checked_list = list(lava_blank_invalid_media_refs(data_list, media_header_info, artifact_name))
+                    if html_data_list is data_list:
+                        html_data_list = checked_list
+                    data_list = txt_data_list = checked_list
                 needs_text_or_html_data = any(
                     check_output_types(output_type, output_types)
                     for output_type in ('html', 'tsv', 'timeline', 'kml')
@@ -799,6 +806,7 @@ def artifact_processor(func):
                         column_map,
                         async_write=getattr(data_list, 'async_write', False),
                         queue_size=getattr(data_list, 'queue_size', 5000),
+                        label=artifact_name,
                     )
                     if is_artifact_result:
                         data_list.set_row_count(inserted_count)
@@ -1149,12 +1157,37 @@ def get_sysdiagnose_files(files_found, target, text_mode=True, encoding='utf-8')
             except (tarfile.TarError, EOFError, OSError) as e:
                 print(f"Error processing archive {file_path}: {e}")
 
+def get_sqlite_db_uri_query(path):
+    '''Return the URI query for a read-only open of the SQLite file at path.
+
+    A database in WAL mode (header bytes 18 and 19 both 2) with no -wal beside
+    it can only be read as the database file alone. For such a file SQLite
+    either refuses a mode=ro open (Apple's SQLite 3.54.0, at the first
+    statement) or creates an empty -wal and a -shm beside it, and a -wal staged
+    there later is then written under another name. immutable=1 reads the file
+    alone and creates neither. It is used only when there is no -wal and no
+    -journal beside the file, because it ignores both, and the open is logged.'''
+    path = str(path)
+    try:
+        with open(path, 'rb') as db_file:
+            header = db_file.read(20)
+    except OSError:
+        return 'mode=ro'
+    if (header[:16] == b'SQLite format 3\x00' and header[18:20] == b'\x02\x02'
+            and not os.path.exists(path + '-wal')
+            and not os.path.exists(path + '-journal')):
+        logfunc(f'{path} is in WAL mode and no -wal is beside it. Opened read-only '
+                'with immutable=1, which reads the database file alone.')
+        return 'mode=ro&immutable=1'
+    return 'mode=ro'
+
 def open_sqlite_db_readonly(path):
     '''Opens a sqlite db in read-only mode, so original db (and -wal/journal are intact)'''
     try:
         if path:
+            query = get_sqlite_db_uri_query(path)
             path = get_sqlite_db_path(path)
-            with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as db:
+            with sqlite3.connect(f"file:{path}?{query}", uri=True) as db:
                 return db
     except sqlite3.OperationalError as e:
         logfunc(f"Error with {path}:")
@@ -1165,8 +1198,9 @@ def attach_sqlite_db_readonly(path, db_name):
     '''Return the query to attach a sqlite db in read-only mode.
     path: str --> Path of the SQLite DB to attach
     db_name: str --> Name of the SQLite DB in the query'''
+    query = get_sqlite_db_uri_query(path)
     path = get_sqlite_db_path(path)
-    return  f'''ATTACH DATABASE "file:{path}?mode=ro" AS {db_name}'''
+    return f'''ATTACH DATABASE "file:{path}?{query}" AS {db_name}'''
 
 class SqliteRecords:
     """The rows of one query, read as the caller iterates.
@@ -1409,7 +1443,8 @@ def timeline(report_folder, tlactivity, data_list, data_headers):
         db.commit()
     
     for entry in data_list:
-        entry = [str(field) for field in entry]
+        # None is written blank, as the HTML and TSV show it, not as the text 'None'.
+        entry = ['' if field is None else str(field) for field in entry]
         
         data_dict = dict(zip(data_headers, entry))
 

@@ -4,7 +4,7 @@ __artifacts_v2__ = {
         "description": "Parses web history from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -13,17 +13,41 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus "
                  "carries such a file, so that path was exercised against a constructed composite and not "
-                 "against a tested image.",
-        "paths": ('*/Chrome/Default/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
+                 "against a tested image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/History*', '*/Edge/*/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
                   '*/Chromium/Default/History*'),
         "output_types": "standard",
         "artifact_icon": "history",
         "sample_data": {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 5 rows",
-            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119 | 9 rows",
+            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119, Microsoft Edge 120.2210.126 | 14 rows",
             "otto_ios17": "iOS 17.5.1 | Google Chrome 127.6533.107 | 5 rows",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 45 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124 | 45 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 21 rows",
+            "dexter_ios18": "iOS 18.3.2 | Google Chrome 140.7339.122 | 160 rows",
+            "hickman_ios15": "iOS 15.3.1 | Brave 1.50, Google Chrome 113.5672.69, Microsoft Edge 112.1722.64 | 16 rows",
         },
     },
     "chromeWebVisits": {
@@ -31,7 +55,7 @@ __artifacts_v2__ = {
         "description": "Parses web visits from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-07-31",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "Transition Type and Qualifier(s) are decoded from visits.transition with the names in "
@@ -45,17 +69,41 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus "
                  "carries such a file, so that path was exercised against a constructed composite and not "
-                 "against a tested image.",
-        "paths": ('*/Chrome/Default/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
+                 "against a tested image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/History*', '*/Edge/*/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
                   '*/Chromium/Default/History*'),
         "output_types": "standard",
         "artifact_icon": "world",
         "sample_data": {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 17 rows",
-            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119 | 16 rows",
+            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119, Microsoft Edge 120.2210.126 | 21 rows",
             "otto_ios17": "iOS 17.5.1 | Google Chrome 127.6533.107 | 6 rows",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 200 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124 | 200 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 52 rows",
+            "dexter_ios18": "iOS 18.3.2 | Google Chrome 140.7339.122 | 470 rows",
+            "hickman_ios15": "iOS 15.3.1 | Brave 1.50, Google Chrome 113.5672.69, Microsoft Edge 112.1722.64 | 30 rows",
         },
     },
     "chromeWebSearch": {
@@ -64,7 +112,7 @@ __artifacts_v2__ = {
                        "search term. Search URLs of any other shape are not reported.",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -73,17 +121,41 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus "
                  "carries such a file, so that path was exercised against a constructed composite and not "
-                 "against a tested image.",
-        "paths": ('*/Chrome/Default/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
+                 "against a tested image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/History*', '*/Edge/*/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
                   '*/Chromium/Default/History*'),
         "output_types": "standard",
         "artifact_icon": "search",
         "sample_data": {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 0 rows",
-            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119 | 2 rows",
+            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119, Microsoft Edge 120.2210.126 | 3 rows",
             "otto_ios17": "iOS 17.5.1 | Google Chrome 127.6533.107 | 1 row",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 6 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124 | 6 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 7 rows",
+            "dexter_ios18": "iOS 18.3.2 | Google Chrome 140.7339.122 | 57 rows",
+            "hickman_ios15": "iOS 15.3.1 | Brave 1.50, Google Chrome 113.5672.69, Microsoft Edge 112.1722.64 | 3 rows",
         },
     },
     "chromeDownloads": {
@@ -91,7 +163,7 @@ __artifacts_v2__ = {
         "description": "Parses downloads from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-07-31",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "State, Danger Type and Interrupt Reason are labels this module assigns to the stored "
@@ -110,8 +182,30 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus "
                  "carries such a file, so that path was exercised against a constructed composite and not "
-                 "against a tested image.",
-        "paths": ('*/Chrome/Default/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
+                 "against a tested image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/History*', '*/Edge/*/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
                   '*/Chromium/Default/History*'),
         "output_types": "standard",
         "artifact_icon": "download",
@@ -119,7 +213,7 @@ __artifacts_v2__ = {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 0 rows",
             "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119 | 0 rows",
             "otto_ios17": "iOS 17.5.1 | Google Chrome 127.6533.107 | 0 rows",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 0 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124 | 0 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 0 rows",
         },
     },
@@ -128,7 +222,7 @@ __artifacts_v2__ = {
         "description": "Parses keyword search terms from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -137,17 +231,41 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus "
                  "carries such a file, so that path was exercised against a constructed composite and not "
-                 "against a tested image.",
-        "paths": ('*/Chrome/Default/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
+                 "against a tested image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/History*', '*/Edge/*/History*', '*/app_sbrowser/Default/History*', '*/app_opera/History*',
                   '*/Chromium/Default/History*'),
         "output_types": "standard",
         "artifact_icon": "search",
         "sample_data": {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 0 rows",
-            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119 | 1 row",
+            "iphone11_ios17": "iOS 17.3 | Google Chrome 120.6099.119, Microsoft Edge 120.2210.126 | 2 rows",
             "otto_ios17": "iOS 17.5.1 | Google Chrome 127.6533.107 | 1 row",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 6 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124 | 6 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 7 rows",
+            "dexter_ios18": "iOS 18.3.2 | Google Chrome 140.7339.122 | 75 rows",
+            "hickman_ios15": "iOS 15.3.1 | Google Chrome 113.5672.69, Microsoft Edge 112.1722.64 | 2 rows",
         },
     },
     "chromeAutofillEntries": {
@@ -155,7 +273,7 @@ __artifacts_v2__ = {
         "description": "Parses autofill entries from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -164,8 +282,30 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus "
                  "carries such a file, so that path was exercised against a constructed composite and not "
-                 "against a tested image.",
-        "paths": ('*/Chrome/Default/Web Data*', '*/app_sbrowser/Default/Web Data*', '*/app_opera/Web Data*',
+                 "against a tested image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Web Data*', '*/Edge/*/Web Data*', '*/app_sbrowser/Default/Web Data*', '*/app_opera/Web Data*',
                   '*/Chromium/Default/Web Data*'),
         "output_types": "standard",
         "artifact_icon": "forms",
@@ -173,8 +313,10 @@ __artifacts_v2__ = {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 0 rows",
             "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119 | 0 rows",
             "otto_ios17": "iOS 17.5.1 | Google Chrome 127.6533.107 | 0 rows",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 0 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124 | 0 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 9 rows",
+            "dexter_ios18": "iOS 18.3.2 | Google Chrome 140.7339.122 | 21 rows",
+            "hickman_ios15": "iOS 15.3.1 | Google Chrome 113.5672.69 | 4 rows",
         },
     },
     "chromeAutofillProfiles": {
@@ -182,7 +324,7 @@ __artifacts_v2__ = {
         "description": "Parses Autofill Profiles from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-08-14",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "Chromium stores address profiles in several layouts and all observed ones are read. "
@@ -206,8 +348,30 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus "
                  "carries such a file, so that path was exercised against a constructed composite and not "
-                 "against a tested image.",
-        "paths": ('*/Chrome/Default/Web Data*', '*/app_sbrowser/Default/Web Data*', '*/app_opera/Web Data*',
+                 "against a tested image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Web Data*', '*/Edge/*/Web Data*', '*/app_sbrowser/Default/Web Data*', '*/app_opera/Web Data*',
                   '*/Chromium/Default/Web Data*'),
         "output_types": "standard",
         "artifact_icon": "user",
@@ -215,10 +379,12 @@ __artifacts_v2__ = {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 0 rows",
             "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119 | 0 rows",
             "otto_ios17": "iOS 17.5.1 | Google Chrome 127.6533.107 | 0 rows",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 0 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124 | 0 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 0 rows",
             "cookbook_ios1751": "iOS 17.5.1 | Google Chrome (com.google.chrome.ios) | 0 rows",
             "hc_ios26": "iOS 26.5.2 | Brave (com.brave.ios.browser) | 0 rows",
+            "dexter_ios18": "iOS 18.3.2 | Google Chrome 140.7339.122 | 1 row",
+            "hickman_ios15": "iOS 15.3.1 | Google Chrome 113.5672.69 | 2 rows",
         },
     },
     "chromeBookmarks": {
@@ -228,19 +394,40 @@ __artifacts_v2__ = {
                        "are not.",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
-        "notes": "",
-        "paths": ('*/Chrome/Default/Bookmarks*', '*/app_sbrowser/Default/Bookmarks*', '*/app_opera/Bookmarks*',
+        "notes": "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Bookmarks*', '*/Edge/*/Bookmarks*', '*/app_sbrowser/Default/Bookmarks*', '*/app_opera/Bookmarks*',
                   '*/Chromium/Default/Bookmarks*'),
         "output_types": "standard",
         "artifact_icon": "bookmark",
         "sample_data": {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 1 row",
-            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1 | 1 row",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 0 rows",
+            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Microsoft Edge 120.2210.126 | 2 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124 | 0 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 0 rows",
+            "hickman_ios15": "iOS 15.3.1 | Google Chrome 113.5672.69, Microsoft Edge 112.1722.64 | 3 rows",
         },
     },
     "chromeCookies": {
@@ -248,7 +435,7 @@ __artifacts_v2__ = {
         "description": "Parses Cookies from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -257,14 +444,40 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus carries such a file, so that path was exercised against a "
                  "constructed composite and not against a tested image. No sample_data is recorded for this "
-                 "artifact, so nothing here shows the Cookies read returning rows on an iOS image.",
-        "paths": ('*/Chrome/Default/Cookies*', '*/app_sbrowser/Default/Cookies*', '*/app_opera/Cookies*', '*/Chromium/Default/Cookies*'),
+                 "artifact, so nothing here shows the Cookies read returning rows on an iOS image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Cookies*', '*/Edge/*/Cookies*', '*/app_sbrowser/Default/Cookies*', '*/app_opera/Cookies*', '*/Chromium/Default/Cookies*'),
         "output_types": "standard",
         "artifact_icon": "cookie",
     },
     "chromeLoginData": {
         "name": "Login Data",
-        "description": "Parses the logins table of Login Data from Chromium based browsers. The "
+        "description": "Parses the logins table of Login Data and of Login Data For Account from "
+                       "Chromium based browsers and from the Google app. Each browser and file name pair is reported as its "
+                       "own table, so two profile folders of one browser that share a file name share "
+                       "a table. In the combined table the Source column names the file a row came "
+                       "from. The "
                        "Password column is the stored password_value after an AES-CBC decrypt with "
                        "a fixed key built into this module; whether iOS stores use that scheme is "
                        "not established here, so the column may not hold the password. Created "
@@ -272,7 +485,7 @@ __artifacts_v2__ = {
                        "whichever gives the year closer to the year the tool is run.",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -281,16 +494,85 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus "
                  "carries such a file, so that path was exercised against a constructed composite and not "
-                 "against a tested image.",
-        "paths": ('*/Chrome/Default/Login Data*', '*/app_sbrowser/Default/Login Data*', '*/app_opera/Login Data*', '*/Chromium/Default/Login Data*'),
+                 "against a tested image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile as Google, the CFBundleDisplayName of the Google app's Info.plist "
+                 "on abe_ios16, dexter_ios18, hc_ios17_2, hc_ios26, hexordia_ios1651 and iphone12_ios18. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder."
+                 " "
+                 "Chromium names the file of its account store Login Data For Account and the file of its "
+                 "profile store Login Data, and describes the account store as \"Gaia-account-scoped "
+                 "storage\" and the profile store as \"profile (i.e. local) storage\" (Reference: Chromium "
+                 "140.0.7339.122, components/password_manager/core/browser/: password_manager_constants.cc "
+                 "lines 9-12 for the file names, password_store_factory_util.cc lines 47 and 56 for which "
+                 "store uses which, and password_form.h lines 466-469 for the store descriptions, "
+                 "https://chromium.googlesource.com/chromium/src/+/refs/tags/140.0.7339.122/components/"
+                 "password_manager/core/browser/password_form.h). Both "
+                 "files have the same logins columns on dexter_ios18 and iphone11_ios17, so one query reads "
+                 "both. Among the registered iOS corpus images, Login Data For Account is present in a "
+                 "browser profile folder the paths read on otto_ios17, dexter_ios18, iphone11_ios17 and "
+                 "cookbook_ios1751 (Chrome) and on hc_ios18_7, iphone11_ios17 and hc_ios26 (Brave's "
+                 "Chromium/Default). Of those browser profile files, only dexter_ios18 (4 rows) and "
+                 "iphone11_ios17 (12 rows) have rows in it, all from Chrome, and on both images Login Data "
+                 "has none. On dexter_ios18 "
+                 "every password_value in Chrome's and in the Google app's Login Data For Account starts "
+                 "with v10. The decrypt in this module gives an empty Password for the 4 Chrome rows and "
+                 "for 3 of the 4 Google app rows; the fourth Google app row decrypts to a single "
+                 "character, which is not shown to be the password. On iphone11_ios17 every row has Blacklisted by User set to 1 and an empty "
+                 "Username and password_value. Releases through v2026.4.5 skipped Login Data For Account."
+                 " "
+                 "The last path reads the Login Data and Login Data For Account the Google app "
+                 "(com.google.GoogleMobile) keeps directly under its Library/Application Support. Among the "
+                 "registered iOS corpus images iLEAPP can read (the two iTunes backups are encrypted), that "
+                 "path matches files only in the Google app's container, "
+                 "on abe_ios16, dexter_ios18, hc_ios17_2, hc_ios26, hexordia_ios1651 and iphone12_ios18. "
+                 "Only dexter_ios18 has rows there: 4 in Login Data For Account, whose origin_url, "
+                 "username_value, signon_realm and date_created are the same as those of the 4 rows in "
+                 "Chrome's Login Data For Account on that image, while password_value differs. The same "
+                 "folder holds a Web Data, which chromeCreditCards and chromePaymentsCustomerData read and "
+                 "the autofill artifacts here do not: of its autofill, autofill_profiles, contact_info, "
+                 "local_addresses and addresses tables, each one present has no rows on any of those "
+                 "images. It also holds "
+                 "an Account Web Data, which no artifact reads; on dexter_ios18 its masked_credit_cards and "
+                 "payments_customer_data tables have one row each. On four of "
+                 "the images it holds an Affiliation Database, which no artifact reads. Releases through "
+                 "v2026.4.5 did not read the Google app's Login Data files.",
+        "paths": ('*/Chrome/*/Login Data*', '*/Edge/*/Login Data*', '*/app_sbrowser/Default/Login Data*', '*/app_opera/Login Data*', '*/Chromium/Default/Login Data*',
+                  '*/Containers/Data/Application/*/Library/Application Support/Login Data*'),
         "output_types": "standard",
         "artifact_icon": "key",
         "sample_data": {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 0 rows",
-            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119 | 0 rows",
+            "iphone11_ios17": "iOS 17.3 | Brave Private Web Browser, VPN 1.61.1, Google Chrome 120.6099.119, Microsoft Edge 120.2210.126 | 12 rows",
+            "dexter_ios18": "iOS 18.3.2 | Google Chrome 140.7339.122, Google 388.0 | 8 rows",
+            "cookbook_ios1751": "iOS 17.5.1 | Google Chrome 128.6613.92 | 0 rows",
             "otto_ios17": "iOS 17.5.1 | Google Chrome 127.6533.107 | 0 rows",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 0 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124, Google 269.0 | 0 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 2 rows",
+            "hickman_ios15": "iOS 15.3.1 | Google Chrome 113.5672.69 | 12 rows",
+            "hc_ios26": "iOS 26.5.2 | Brave Browser & Search Engine 1.91.1, Google 430.3 | 1 row",
+            "hc_ios17_2": "iOS 17.2.1 | Google 285.0 | 0 rows",
+            "hexordia_ios1651": "iOS 16.5.1 | Google 295.0 | 0 rows",
+            "iphone12_ios18": "iOS 18.7 | Google 399.2 | 0 rows",
         },
     },
     "chromeTopSites": {
@@ -298,22 +580,45 @@ __artifacts_v2__ = {
         "description": "Parses Top Sites from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-08-14",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "The redirects column is absent from the version-5 Top Sites schema observed "
-                 "on every corpus store checked (iOS 16.1.1-26.5.2); it is reported blank there.",
-        "paths": ('*/Chrome/Default/Top Sites*', '*/app_sbrowser/Default/Top Sites*', '*/app_opera/Top Sites*', '*/Chromium/Default/Top Sites*'),
+                 "on every corpus store checked (iOS 16.1.1-26.5.2); it is reported blank there."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Top Sites*', '*/Edge/*/Top Sites*', '*/app_sbrowser/Default/Top Sites*', '*/app_opera/Top Sites*', '*/Chromium/Default/Top Sites*'),
         "output_types": ['lava', 'tsv', 'html'],
         "artifact_icon": "star",
         "sample_data": {
             "hc_ios18_7": "iOS 18.7.8 | Brave Browser & Search Engine 1.88 | 1 row",
             "iphone11_ios17": "iOS 17.3 | Google Chrome 120.6099.119 | 1 row",
             "otto_ios17": "iOS 17.5.1 | Google Chrome 127.6533.107 | 0 rows",
-            "abe_ios16": "iOS 16.5 | Google Chrome 109.5414.112 | 0 rows",
+            "abe_ios16": "iOS 16.5 | Google Chrome 114.5735.124 | 0 rows",
             "magnet_ios16": "iOS 16.1.1 | Google Chrome 108.5359.112 | 0 rows",
             "cookbook_ios1751": "iOS 17.5.1 | Google Chrome (com.google.chrome.ios) | 0 rows",
             "hc_ios26": "iOS 26.5.2 | Brave (com.brave.ios.browser) | 7 rows",
+            "hickman_ios15": "iOS 15.3.1 | Google Chrome 113.5672.69, Microsoft Edge 112.1722.64 | 2 rows",
         },
     },
     "chromeOfflinePages": {
@@ -321,7 +626,7 @@ __artifacts_v2__ = {
         "description": "Parses Offline Pages from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -330,8 +635,30 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus carries such a file, so that path was exercised against a "
                  "constructed composite and not against a tested image. No sample_data is recorded for this "
-                 "artifact, so nothing here shows the Offline Pages read returning rows on an iOS image.",
-        "paths": ('*/Chrome/Default/Offline Pages/metadata/OfflinePages.db*',
+                 "artifact, so nothing here shows the Offline Pages read returning rows on an iOS image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Offline Pages/metadata/OfflinePages.db*', '*/Edge/*/Offline Pages/metadata/OfflinePages.db*',
                   '*/app_sbrowser/Default/Offline Pages/metadata/OfflinePages.db*',
                   '*/Chromium/Default/Offline Pages/metadata/OfflinePages.db*'),
         "output_types": "standard",
@@ -342,7 +669,7 @@ __artifacts_v2__ = {
         "description": "Parses Media History Sessions from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -351,8 +678,30 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus carries such a file, so that path was exercised against a "
                  "constructed composite and not against a tested image. No sample_data is recorded for this "
-                 "artifact, so nothing here shows the Media History read returning rows on an iOS image.",
-        "paths": ('*/Chrome/Default/Media History*', '*/app_sbrowser/Default/Media History*',
+                 "artifact, so nothing here shows the Media History read returning rows on an iOS image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Media History*', '*/Edge/*/Media History*', '*/app_sbrowser/Default/Media History*',
                   '*/app_opera/Media History*', '*/Chromium/Default/Media History*'),
         "output_types": "standard",
         "artifact_icon": "movie",
@@ -362,7 +711,7 @@ __artifacts_v2__ = {
         "description": "Parses Media History Playbacks from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -371,8 +720,30 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus carries such a file, so that path was exercised against a "
                  "constructed composite and not against a tested image. No sample_data is recorded for this "
-                 "artifact, so nothing here shows the Media History read returning rows on an iOS image.",
-        "paths": ('*/Chrome/Default/Media History*', '*/app_sbrowser/Default/Media History*',
+                 "artifact, so nothing here shows the Media History read returning rows on an iOS image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Media History*', '*/Edge/*/Media History*', '*/app_sbrowser/Default/Media History*',
                   '*/app_opera/Media History*', '*/Chromium/Default/Media History*'),
         "output_types": "standard",
         "artifact_icon": "player-play",
@@ -382,7 +753,7 @@ __artifacts_v2__ = {
         "description": "Parses Media History Origins from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -391,8 +762,30 @@ __artifacts_v2__ = {
                  "Codes', SQLITE_READONLY_ROLLBACK, https://www.sqlite.org/rescode.html#readonly_rollback). "
                  "No registered iOS corpus carries such a file, so that path was exercised against a "
                  "constructed composite and not against a tested image. No sample_data is recorded for this "
-                 "artifact, so nothing here shows the Media History read returning rows on an iOS image.",
-        "paths": ('*/Chrome/Default/Media History*', '*/app_sbrowser/Default/Media History*',
+                 "artifact, so nothing here shows the Media History read returning rows on an iOS image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Media History*', '*/Edge/*/Media History*', '*/app_sbrowser/Default/Media History*',
                   '*/app_opera/Media History*', '*/Chromium/Default/Media History*'),
         "output_types": "standard",
         "artifact_icon": "world",
@@ -402,7 +795,7 @@ __artifacts_v2__ = {
         "description": "Parses Network Action Predictor records from Chromium Based Browsers",
         "author": "@stark4n6",
         "creation_date": "2024-11-10",
-        "last_update_date": "2026-06-24",
+        "last_update_date": "2026-10-26",
         "requirements": "none",
         "category": "Chromium",
         "notes": "A database that cannot be read is logged and skipped, so the other browsers on the device "
@@ -412,8 +805,30 @@ __artifacts_v2__ = {
                  "No registered iOS corpus carries such a file, so that path was exercised against a "
                  "constructed composite and not against a tested image. No sample_data is recorded for this "
                  "artifact, so nothing here shows the Network Action Predictor read returning rows on an "
-                 "iOS image.",
-        "paths": ('*/Chrome/Default/Network Action Predictor*','*/app_sbrowser/Default/Network Action Predictor*',
+                 "iOS image."
+                 " "
+                 "Browser Name comes from the app container's bundle identifier: com.google.chrome.ios is "
+                 "reported as Chrome, com.brave.ios.browser as Brave, com.microsoft.msedge as Edge and "
+                 "com.google.GoogleMobile (the Google app) as Google. In "
+                 "a full file system the identifier is read from the container's "
+                 ".com.apple.mobile_container_manager.metadata.plist (MCMMetadataIdentifier). In an iTunes"
+                 " backup it is the container folder name, which follows the seeker's backup layout. No "
+                 "iTunes backup in the corpus was run for this case; it is covered by a unit test only "
+                 "(admin/test/scripts/test_chrome_browser_name.py). Any other file is named from its path "
+                 "inside the container, or inside the extraction when it is in no container, which is "
+                 "tested for app_sbrowser (Browser), brave, microsoft (Edge), opera, chromium and chrome, "
+                 "in that order; the first test that matches names the browser, and it is Unknown when "
+                 "none matches. Folders above the extraction, such as the case folder, are never read. "
+                 "Brave keeps its profile under Application Support/Chromium on hc_ios18_7, hc_ios26, "
+                 "iphone11_ios17 and hickman_ios15, which releases v2026.1.0 through v2026.4.5 reported as"
+                 " Chromium."
+                 " "
+                 "The paths read every profile folder under Chrome and under Edge, not only Default. On "
+                 "dexter_ios18 Chrome's only profile is in a folder named by a UUID, and on hickman_ios15 "
+                 "and iphone11_ios17 Edge keeps Microsoft/Edge/Default and Default-AAD. Default-AAD holds "
+                 "History, Web Data and Login Data on both; each was read and gave no rows. These "
+                 "artifacts in releases through v2026.4.5 read only Chrome/Default and no Edge folder.",
+        "paths": ('*/Chrome/*/Network Action Predictor*', '*/Edge/*/Network Action Predictor*','*/app_sbrowser/Default/Network Action Predictor*',
                   '*/app_opera/Network Action Predictor*', '*/Chromium/Default/Network Action Predictor*'),
         "output_types": ['lava', 'tsv', 'html'],
         "artifact_icon": "trending-up",
@@ -421,6 +836,7 @@ __artifacts_v2__ = {
 }
 
 import os
+import plistlib
 import urllib.parse
 import json
 import datetime
@@ -435,9 +851,72 @@ from scripts.ilapfuncs import logfunc, get_next_unused_name, open_sqlite_db_read
 from scripts.context import Context
 
 
-def get_browser_name(file_name):
+# Bundle identifiers recorded by the container manager (MCMMetadataIdentifier) on the iOS
+# corpus images for apps whose Chromium stores these artifacts read, and the name each is
+# reported as.
+_BROWSER_IDENTIFIERS = {
+    'com.google.chrome.ios': 'Chrome',
+    'com.brave.ios.browser': 'Brave',
+    'com.microsoft.msedge': 'Edge',
+    'com.google.GoogleMobile': 'Google',
+}
+_CONTAINER = re.compile(r'(?:^|/)Containers/Data/Application/([^/]+)(?=/)')
+_UUID = re.compile(r'^[0-9A-Fa-f]{8}(?:-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}$')
+_METADATA_NAME = '.com.apple.mobile_container_manager.metadata.plist'
+_container_identifiers = {}
 
-    name = file_name.lower()
+
+def _container_identifier(relative, container):
+    """Return the MCMMetadataIdentifier of the container holding a file, or ''.
+
+    In an iTunes backup the seeker names the container folder by bundle identifier
+    (search_files.get_root_path_from_domain), so the folder name is the identifier.
+    In a full file system it is a UUID and the identifier is read from the container's
+    metadata plist, found through the seeker once per container.
+    """
+    if not _UUID.match(container):
+        return container
+    root = relative[:relative.index(container) + len(container)]
+    key = (Context.get_data_folder(), root)
+    if key not in _container_identifiers:
+        identifier = ''
+        try:
+            found = Context.get_seeker().search(
+                f'*/Containers/Data/Application/{container}/{_METADATA_NAME}')
+        except ValueError:  # no seeker outside a run
+            found = []
+        for path in found:
+            if Context.get_relative_path(str(path)).replace('\\', '/') != f'{root}/{_METADATA_NAME}':
+                continue
+            try:
+                with open(path, 'rb') as handle:
+                    value = plistlib.load(handle)
+            except (OSError, plistlib.InvalidFileException, ValueError):
+                continue
+            if isinstance(value, dict) and isinstance(value.get('MCMMetadataIdentifier'), str):
+                identifier = value['MCMMetadataIdentifier']
+        _container_identifiers[key] = identifier
+    return _container_identifiers[key]
+
+
+def get_browser_name(file_name):
+    """Name the browser that wrote a file from evidence inside the extraction only.
+
+    The app container's bundle identifier decides when it is a known browser. Otherwise
+    the folder names inside the container (or inside the extraction, for a file outside
+    any container) are tested, never the examiner's own folders above the data folder.
+    """
+    relative = Context.get_relative_path(str(file_name)).replace('\\', '/')
+    container = _CONTAINER.search(relative)
+    if container:
+        identifier = _container_identifier(relative, container.group(1))
+        if identifier in _BROWSER_IDENTIFIERS:
+            return _BROWSER_IDENTIFIERS[identifier]
+        relative = relative[container.end():]
+
+    name = relative.lower()
+    if 'app_sbrowser' in name:
+        return 'Browser'
     if 'brave' in name:
         return 'Brave'
     elif 'microsoft' in name:
@@ -527,15 +1006,13 @@ def chromeWebHistory(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
     
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'History':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
             
         # Web History
         all_rows = _read_rows(file_found, browser_name, 'Web History', '''
@@ -555,7 +1032,7 @@ def chromeWebHistory(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Web History'
@@ -591,7 +1068,7 @@ def chromeWebHistory(context):
         else:
             logfunc(f'No {browser_name} - Web History data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -606,15 +1083,13 @@ def chromeWebVisits(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
     
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'History':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         #Web Visits
         all_rows = _read_rows(file_found, browser_name, 'Web Visits', '''
@@ -659,7 +1134,7 @@ def chromeWebVisits(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Web Visits'
@@ -697,7 +1172,7 @@ def chromeWebVisits(context):
         else:
             logfunc(f'No {browser_name} - Web Visits data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 @artifact_processor
 def chromeWebSearch(context):
@@ -712,15 +1187,13 @@ def chromeWebSearch(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
     
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'History':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         #Web Search
         all_rows = _read_rows(file_found, browser_name, 'Web Search', '''
@@ -735,7 +1208,7 @@ def chromeWebSearch(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Web Search'
@@ -776,7 +1249,7 @@ def chromeWebSearch(context):
         else:
             logfunc(f'No {browser_name} - Web Search Terms data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -795,15 +1268,13 @@ def chromeDownloads(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
     
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'History':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         #Downloads
         # check for last_access_time column, an older version of chrome db (32) does not have it
@@ -898,7 +1369,7 @@ def chromeDownloads(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Downloads'
@@ -934,7 +1405,7 @@ def chromeDownloads(context):
         else:
             logfunc(f'No {browser_name} - Downloads data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -949,15 +1420,13 @@ def chromeKeywordSearchTerms(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
     
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'History':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         #Search Terms
         all_rows = _read_rows(file_found, browser_name, 'Keyword Search Terms', '''
@@ -973,7 +1442,7 @@ def chromeKeywordSearchTerms(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Keyword Search Terms'
@@ -1010,7 +1479,7 @@ def chromeKeywordSearchTerms(context):
         else:
             logfunc(f'No {browser_name} - Keyword Search Terms data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -1029,15 +1498,13 @@ def chromeAutofillEntries(context):
     category = "Chromium"
     module_name = "chromeAutofillEntries"
     
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'Web Data':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         db = open_sqlite_db_readonly(file_found)
         if db is None:
@@ -1077,7 +1544,7 @@ def chromeAutofillEntries(context):
         finally:
             db.close()
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if modern_schema:
             if len(all_rows) > 0:
@@ -1149,7 +1616,7 @@ def chromeAutofillEntries(context):
             else:
                 logfunc(f'No {browser_name} - Autofill - Entries data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 # Chromium retired the autofill_profiles / autofill_profile_* join. Web Data v120-128
@@ -1211,15 +1678,13 @@ def chromeAutofillProfiles(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
     
-    report_file = 'Unknown'
+    report_files = []
     
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'Web Data':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         db = open_sqlite_db_readonly(file_found)
         if db is None:
@@ -1267,7 +1732,7 @@ def chromeAutofillProfiles(context):
         finally:
             db.close()
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Autofill - Profiles'
@@ -1309,7 +1774,7 @@ def chromeAutofillProfiles(context):
         else:
             logfunc(f'No {browser_name} - Autofill - Profiles data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -1325,7 +1790,7 @@ def chromeBookmarks(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
@@ -1334,11 +1799,9 @@ def chromeBookmarks(context):
         if not (file_path == 'Bookmarks' or file_path == 'Bookmarks.bak'):  # skip -journal and other files
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         with open(file_found, "r", encoding="utf-8") as f:
             dataa = json.load(f)
@@ -1396,7 +1859,7 @@ def chromeBookmarks(context):
         else:
             logfunc(f'No {browser_name} - Bookmarks data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -1414,15 +1877,13 @@ def chromeCookies(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'Cookies':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         all_rows = _read_rows(file_found, browser_name, 'Cookies', '''
         SELECT
@@ -1463,7 +1924,7 @@ def chromeCookies(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Cookies'
@@ -1503,7 +1964,7 @@ def chromeCookies(context):
         else:
             logfunc(f'No {browser_name} - Cookies data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 @artifact_processor
 def chromeLoginData(context):
@@ -1518,16 +1979,15 @@ def chromeLoginData(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
     for file_found in context.get_files_found():
         file_found = str(file_found)
-        if not os.path.basename(file_found) == 'Login Data':  # skip -journal and other files
+        store_name = os.path.basename(file_found)
+        if store_name not in ('Login Data', 'Login Data For Account'):  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
-        all_rows = _read_rows(file_found, browser_name, 'Login Data', '''
+        all_rows = _read_rows(file_found, browser_name, store_name, '''
         SELECT
         username_value,
         password_value,
@@ -1545,10 +2005,10 @@ def chromeLoginData(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
-            report_name = f'{browser_name} - Login Data'
+            report_name = f'{browser_name} - {store_name}'
             report = ArtifactHtmlReport(report_name)
             # check for existing and get next name for report file, so report from another file does not get overwritten
             report_path = os.path.join(context.get_report_folder(), f'{report_name}.temphtml')
@@ -1584,9 +2044,9 @@ def chromeLoginData(context):
             # Add current list to the combined list
             all_data.extend(data_list)
         else:
-            logfunc(f'No {browser_name} - Login Data available')
+            logfunc(f'No {browser_name} - {store_name} available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -1600,17 +2060,15 @@ def chromeTopSites(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'Top Sites':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         db = open_sqlite_db_readonly(file_found)
         cursor = db.cursor()
@@ -1674,7 +2132,7 @@ def chromeTopSites(context):
 
         db.close()
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -1691,15 +2149,13 @@ def chromeOfflinePages(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
         if not os.path.basename(file_found) == 'OfflinePages.db':  # skip -journal and other files
             continue
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         all_rows = _read_rows(file_found, browser_name, 'Offline Pages', '''
         SELECT
@@ -1715,7 +2171,7 @@ def chromeOfflinePages(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Offline Pages'
@@ -1753,7 +2209,7 @@ def chromeOfflinePages(context):
         else:
             logfunc(f'No {browser_name} - Offline Pages data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -1769,7 +2225,7 @@ def chromeMediaHistorySessions(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
@@ -1777,8 +2233,6 @@ def chromeMediaHistorySessions(context):
             continue  # Skip all other files
 
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         all_rows = _read_rows(file_found, browser_name, 'Media History - Sessions', '''
         select
@@ -1796,7 +2250,7 @@ def chromeMediaHistorySessions(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Media History - Sessions'
@@ -1834,7 +2288,7 @@ def chromeMediaHistorySessions(context):
         else:
             logfunc(f'No {browser_name} - Media History - Sessions data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 @artifact_processor
 def chromeMediaHistoryPlaybacks(context):
@@ -1848,7 +2302,7 @@ def chromeMediaHistoryPlaybacks(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
@@ -1856,8 +2310,6 @@ def chromeMediaHistoryPlaybacks(context):
             continue  # Skip all other files
 
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         all_rows = _read_rows(file_found, browser_name, 'Media History - Playbacks', '''
         select
@@ -1879,7 +2331,7 @@ def chromeMediaHistoryPlaybacks(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Media History - Playbacks'
@@ -1917,7 +2369,7 @@ def chromeMediaHistoryPlaybacks(context):
         else:
             logfunc(f'No {browser_name} - Media History - Playbacks data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 @artifact_processor
 def chromeMediaHistoryOrigins(context):
@@ -1931,7 +2383,7 @@ def chromeMediaHistoryOrigins(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
@@ -1939,8 +2391,6 @@ def chromeMediaHistoryOrigins(context):
             continue  # Skip all other files
 
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         all_rows = _read_rows(file_found, browser_name, 'Media History - Origins', '''
         select
@@ -1953,7 +2403,7 @@ def chromeMediaHistoryOrigins(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Media History - Origins'
@@ -1991,7 +2441,7 @@ def chromeMediaHistoryOrigins(context):
         else:
             logfunc(f'No {browser_name} - Media History - Origins data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
 
 
 @artifact_processor
@@ -2006,7 +2456,7 @@ def chromeNetworkActionPredictor(context):
 
     all_data_headers = lava_data_headers + ['Browser Name', 'Source']
 
-    report_file = 'Unknown'
+    report_files = []
 
     for file_found in context.get_files_found():
         file_found = str(file_found)
@@ -2014,8 +2464,6 @@ def chromeNetworkActionPredictor(context):
             continue  # Skip all other files
 
         browser_name = get_browser_name(file_found)
-        if file_found.find('app_sbrowser') >= 0:
-            browser_name = 'Browser'
 
         all_rows = _read_rows(file_found, browser_name, 'Network Action Predictor', '''
         select
@@ -2028,7 +2476,7 @@ def chromeNetworkActionPredictor(context):
         if all_rows is None:
             continue
 
-        report_file = file_found if report_file == 'Unknown' else report_file + ', ' + file_found
+        report_files.append(file_found)
 
         if len(all_rows) > 0:
             report_name = f'{browser_name} - Network Action Predictor'
@@ -2066,4 +2514,4 @@ def chromeNetworkActionPredictor(context):
         else:
             logfunc(f'No {browser_name} - Network Action Predictor data available')
 
-    return all_data_headers, all_data, report_file
+    return all_data_headers, all_data, '\n'.join(report_files)
