@@ -149,9 +149,9 @@ def two_columns(screen, app):
 def wrap_to_width(event):
     """ Break the lines of a text where the room for it in the widget ends. """
     widget = event.widget
-    margin = 2 * sum(int(widget.cget(option)) for option in ("borderwidth", "padx", "highlightthickness"))
+    margin = 2 * sum(widget.tk.getint(widget.cget(option)) for option in ("borderwidth", "padx", "highlightthickness"))
     wraplength = max(event.width - margin, 1)
-    if int(widget.cget("wraplength")) != wraplength:
+    if widget.tk.getint(widget.cget("wraplength")) != wraplength:
         widget.configure(wraplength=wraplength)
 
 
