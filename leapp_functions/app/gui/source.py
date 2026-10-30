@@ -6,7 +6,8 @@ import tkinter as tk
 from tkinter import filedialog
 
 from leapp_functions import leapp
-from leapp_functions.app import history
+from leapp_functions.app import history, input_type
+from leapp_functions.app.gui import themes
 from leapp_functions.app.gui.custom_widgets import (Caption, Card, Field, LabeledEntry,
                                                     OutlineButton, Tooltip, two_columns)
 from scripts.raw_image import RAW_IMAGE_FILE_PATTERNS, RAW_IMAGE_LABEL, selection_text
@@ -14,6 +15,7 @@ from scripts.raw_image import RAW_IMAGE_FILE_PATTERNS, RAW_IMAGE_LABEL, selectio
 FILE_TYPES = (("All supported files", "*.tar *.zip *.gz *.xz " + RAW_IMAGE_FILE_PATTERNS),
               ("tar file", "*.tar"), ("zip file", "*.zip"), ("gz file", "*.gz"),
               ("tar.xz file", "*.xz"), (RAW_IMAGE_LABEL, RAW_IMAGE_FILE_PATTERNS))
+DETECT_DELAY = 300
 
 
 class SourceScreen(tk.Frame):
@@ -24,8 +26,9 @@ class SourceScreen(tk.Frame):
         self.app = app
         self.state = app.app_state
 
-        main, _side = two_columns(self, app)
+        main, side = two_columns(self, app)
         self.build_extraction(main)
+        DetectedCard(side, app).pack(fill="x")
 
     def build_extraction(self, main):
         """ The card with the path of the extraction and the buttons that fill it in. """
@@ -118,3 +121,52 @@ class SourceScreen(tk.Frame):
             menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
         finally:
             menu.grab_release()
+
+
+class DetectedCard(tk.Frame):
+    """ The card on the right of the Source screen: what the source is, as the run will read it. """
+
+    def __init__(self, parent, app):
+        super().__init__(parent, bg=app.colors.main_bg)
+        self.app = app
+        card = Card(self, app, "DETECTED")
+        card.pack(fill="x")
+        self.kind = Caption(card.body, app, "", card.background)
+        self.kind.configure(fg=app.colors.text_primary, font=themes.sans(13, "bold"))
+        self.kind.pack(fill="x")
+        self.detail = Caption(card.body, app, "", card.background)
+
+        self.pending = None
+        variable = app.app_state.run.source
+        trace = variable.trace_add("write", lambda *_args: self.schedule())
+        self.bind("<Destroy>", lambda _event: self.stop(variable, trace))
+        self.refresh()
+
+    def schedule(self):
+        """ Look at the source a moment after the last change of the field. """
+        if self.pending is not None:
+            self.after_cancel(self.pending)
+        self.pending = self.after(DETECT_DELAY, self.refresh)
+
+    def stop(self, variable, trace):
+        """ The card is destroyed: the field is no longer watched for it. """
+        variable.trace_remove("write", trace)
+        if self.pending is not None:
+            self.after_cancel(self.pending)
+
+    def refresh(self):
+        """ Show what the source is. """
+        self.pending = None
+        colors = self.app.colors
+        detected = input_type.detect(self.app.app_state.source_paths())
+        if detected is None:
+            detected = input_type.Detected("", "Nothing selected",
+                                           note="The type of the extraction shows here once it is chosen.")
+        self.kind.configure(text=detected.label)
+        detail = detected.problem or detected.note
+        self.detail.configure(text=detail, fg=colors.text_leapp_color if detected.problem
+                              else colors.text_secondary)
+        if detail:
+            self.detail.pack(fill="x", pady=(6, 0))
+        else:
+            self.detail.pack_forget()
