@@ -10,12 +10,14 @@ from leapp_functions.app import history, input_type
 from leapp_functions.app.gui import themes
 from leapp_functions.app.gui.custom_widgets import (Caption, Card, Field, LabeledEntry,
                                                     OutlineButton, Tooltip, two_columns)
-from scripts.raw_image import RAW_IMAGE_FILE_PATTERNS, RAW_IMAGE_LABEL, selection_text
+from scripts.raw_image import (RAW_IMAGE_FILE_PATTERNS, RAW_IMAGE_LABEL, confirm_found_members,
+                               selection_text)
 
 FILE_TYPES = (("All supported files", "*.tar *.zip *.gz *.xz " + RAW_IMAGE_FILE_PATTERNS),
               ("tar file", "*.tar"), ("zip file", "*.zip"), ("gz file", "*.gz"),
               ("tar.xz file", "*.xz"), (RAW_IMAGE_LABEL, RAW_IMAGE_FILE_PATTERNS))
 DETECT_DELAY = 300
+POLL_DELAY = 100
 
 
 class SourceScreen(tk.Frame):
@@ -135,6 +137,8 @@ class DetectedCard(tk.Frame):
         self.kind.configure(fg=app.colors.text_primary, font=themes.sans(13, "bold"))
         self.kind.pack(fill="x")
         self.detail = Caption(card.body, app, "", card.background)
+        self.unlock_panel = UnlockPanel(card.body, app, card.background)
+        self.unlock_panel.pack(fill="x")
 
         self.pending = None
         variable = app.app_state.run.source
@@ -168,6 +172,136 @@ class DetectedCard(tk.Frame):
         self.detail.configure(text=detail, fg=colors.text_leapp_color if detected.problem
                               else colors.text_secondary)
         if detail:
-            self.detail.pack(fill="x", pady=(6, 0))
+            self.detail.pack(fill="x", pady=(6, 0), before=self.unlock_panel)
         else:
             self.detail.pack_forget()
+        self.unlock_panel.restart()
+
+
+class UnlockPanel(tk.Frame):
+    """ Under what the source is: the questions asked to open it, one at a time. """
+
+    def __init__(self, parent, app, background):
+        super().__init__(parent, bg=background)
+        self.app = app
+        self.background = background
+        self.secret = tk.StringVar()
+        self.shown = None
+        self.polling = None
+        self.bind("<Destroy>", lambda _event: self.stop())
+
+    def stop(self):
+        """ No more looking for questions. """
+        if self.polling is not None:
+            self.after_cancel(self.polling)
+            self.polling = None
+
+    def restart(self):
+        """ Look for the questions of the source's sequence, a new one or the one already running. """
+        self.stop()
+        self.poll()
+
+    def poll(self):
+        """ Show what the sequence asks, and look again a moment later while it runs.
+        The window takes the questions in (MainWindow.watch_unlock): this only shows them. """
+        self.polling = None
+        unlock = self.app.app_state.run.unlock
+        if unlock is not None:
+            if not unlock.shown.done:
+                self.polling = self.after(POLL_DELAY, self.poll)
+        # Built again only when what it shows has changed, so as not to clear a field being typed in
+        shown = (unlock, unlock.shown.waiting, unlock.shown.message,
+                 unlock.shown.done) if unlock else None
+        if shown != self.shown:
+            self.shown = shown
+            self.build(unlock)
+
+    def build(self, unlock):
+        """ The message, then the question waiting for an answer, or what the sequence is doing. """
+        for child in self.winfo_children():
+            child.destroy()
+        if unlock is None:
+            return
+        tk.Frame(self, bg=self.background, height=12).pack(fill="x")
+        colors = self.app.colors
+        message = unlock.shown.message
+        if message is not None:
+            self.text(message.text, colors.text_leapp_color if message.kind == "error"
+                      else colors.text_secondary)
+        question = unlock.shown.waiting
+        if question is None:
+            self.build_status(unlock)
+        elif question.kind == "secret":
+            self.build_secret(unlock, question)
+        elif question.kind == "file":
+            self.text(question.title, colors.text_primary)
+            self.buttons(("Choose…", lambda: self.choose_file(unlock, question)),
+                         ("Cancel", lambda: unlock.answer(None)))
+        else:
+            self.text("Other members of the RAID set were found beside this image.",
+                      colors.text_primary)
+            self.buttons(("Review…", lambda: unlock.answer(
+                confirm_found_members(self.winfo_toplevel(), question.extra))),
+                         ("Cancel", lambda: unlock.answer(None)))
+
+    def build_status(self, unlock):
+        """ No question: the sequence is still reading the source, or it has ended. """
+        colors = self.app.colors
+        if not unlock.shown.done:
+            self.text("Opening the source…", colors.text_secondary)
+        elif unlock.result is not None and unlock.shown.locked:
+            self.text("Opened. Locked volumes are not read.", colors.text_secondary)
+        elif unlock.result is not None:
+            self.text("Opened: ready to be read.", colors.text_secondary)
+        else:
+            self.text("Not opened.", colors.text_leapp_color)
+            self.buttons(("Try again", self.try_again))
+
+    def build_secret(self, unlock, question):
+        """ A password to type, hidden, with the question above it. """
+        self.text(question.text, self.app.colors.text_primary)
+        field = LabeledEntry(self, self.app, Field(question.title, self.secret),
+                             background=self.background)
+        field.entry.configure(show="•")
+        field.entry.bind("<Return>", lambda _event: self.send_secret(unlock))
+        field.pack(fill="x", pady=(8, 0))
+        self.buttons(("Unlock", lambda: self.send_secret(unlock)),
+                     ("Cancel", lambda: unlock.answer(None)))
+
+    def text(self, text, color):
+        """ A line of text, on as many lines as it needs. """
+        caption = Caption(self, self.app, text, self.background)
+        caption.configure(fg=color)
+        caption.pack(fill="x", pady=(0, 6))
+
+    def buttons(self, *buttons):
+        """ A row of buttons, each given as (text, command). Any answer shows what comes next at once. """
+        row = tk.Frame(self, bg=self.background)
+        row.pack(fill="x", pady=(8, 0))
+        for text, command in buttons:
+            OutlineButton(row, self.app, text=text, command=lambda command=command: self.then(command),
+                          style="in_card").pack(side="left", padx=(0, 8))
+
+    def then(self, command):
+        """ Run a button's command, then show at once what it changed. """
+        command()
+        self.app.app_state.poll_unlock()
+        self.restart()
+
+    def send_secret(self, unlock):
+        """ Give the password typed to the sequence, and forget it here. """
+        secret = self.secret.get()
+        self.secret.set("")
+        unlock.answer(secret)
+        self.app.app_state.poll_unlock()
+        self.restart()
+
+    def choose_file(self, unlock, question):
+        """ Answer with the file chosen in a file dialog, None when it is cancelled. """
+        path = filedialog.askopenfilename(parent=self.winfo_toplevel(), title=question.title,
+                                          filetypes=question.extra)
+        unlock.answer(path or None)
+
+    def try_again(self):
+        """ Run the sequence of the same source again. """
+        self.app.app_state.start_unlock()

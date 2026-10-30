@@ -18,6 +18,7 @@ from leapp_functions.app.gui.source import SourceScreen
 from leapp_functions.app.gui.status_bar import StatusBar
 
 MIN_SIZE = (900, 700)
+UNLOCK_POLL = 100
 
 TITLES = {key: title for key, title, _icon in STAGES} | {"review": "Review"}
 
@@ -70,6 +71,7 @@ class MainWindow(tk.Tk):
 
         self.build()
         self.fix_size()
+        self.watch_unlock()
         if sys.platform == "darwin":
             # the window has to be on screen first
             self.after(300, self.redraw)
@@ -176,6 +178,11 @@ class MainWindow(tk.Tk):
             # Starting and stopping a run need the engine, which is not connected yet
             messagebox.showinfo("Not available yet", "The engine is not connected yet.",
                                 parent=self)
+
+    def watch_unlock(self):
+        """ Follow the sequence that opens the source, whatever the screen on show. """
+        self.app_state.poll_unlock()
+        self.after(UNLOCK_POLL, self.watch_unlock)
 
     def refresh_steps(self):
         """ Redraw the steps ans status bar after the application state changes. """

@@ -9,6 +9,7 @@ import tkinter as tk
 from types import SimpleNamespace
 
 from leapp_functions.app import input_type
+from leapp_functions.app.unlock import UNLOCKERS, Unlock
 from scripts.filetype import guess_mime
 from scripts.raw_image import selected_paths, selection_text
 
@@ -33,7 +34,7 @@ class AppState:
                                     logo_mimetype=tk.StringVar(), logo_base64=tk.StringVar())
 
         self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar(), selection=[],
-                                   detected=None)
+                                   detected=None, unlock=None)
         self.selected_artifacts = set()
 
         self.run_status = "idle"  # "idle" until a run starts, then "running", then "finished"
@@ -89,6 +90,29 @@ class AppState:
         detected = input_type.detect(self.source_paths())
         if detected != self.run.detected:
             self.run.detected = detected
+            self.start_unlock()
+            self.on_change()
+
+    def start_unlock(self):
+        """ Open the source on a worker thread when opening it may ask for something (see
+        UNLOCKERS). The sequence of the previous source is stopped. """
+        if self.run.unlock is not None:
+            self.run.unlock.cancel()
+            self.run.unlock = None
+        detected = self.run.detected
+        unlocker = UNLOCKERS.get(detected.kind) if detected is not None else None
+        sequence = unlocker(self.source_paths()) if unlocker else None
+        if sequence is not None:
+            self.run.unlock = Unlock(sequence)
+
+    def poll_unlock(self):
+        """ Take in what the sequence that opens the source has asked. When it ends, the source
+        is done or not: the window is told. """
+        unlock = self.run.unlock
+        if unlock is None or unlock.shown.done:
+            return
+        unlock.poll()
+        if unlock.shown.done:
             self.on_change()
 
     def missing_for_source(self):
@@ -96,7 +120,14 @@ class AppState:
         detected = self.run.detected
         if detected is None:
             return "Select an extraction first: nothing can be parsed without one."
-        return "" if detected.kind else detected.problem
+        if not detected.kind:
+            return detected.problem
+        unlock = self.run.unlock
+        if unlock is not None and not unlock.shown.done:
+            return "The source is still being opened: see the Source step."
+        if unlock is not None and unlock.result is None:
+            return "The source could not be opened: see the Source step."
+        return ""
 
     def stage(self):
         """The step of the five under the header that the screen on show belongs to."""
@@ -141,7 +172,7 @@ class AppState:
     def completed(self):
         """ The steps done, shown with a tick.
         The case data is optional: the step is done once the user has moved on from it.
-        The source is done once it can be read.
+        The source is done once it can be read, after the questions asked to open it.
         """
         done = set()
         if "case" in self.left or not self.case_is_empty():

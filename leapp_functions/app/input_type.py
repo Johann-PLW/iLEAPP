@@ -103,7 +103,7 @@ def detect_backup(path, kind, supported):
         return Detected("itunes", label)
     if kind == "mbdb":
         return Detected("", f"{label}, encrypted", problem="iTunes Legacy Encrypted Backup not supported")
-    return Detected("itunes", f"{label}, encrypted", note="Its password is asked when the run starts.")
+    return Detected("itunes", f"{label}, encrypted")
 
 
 def backup_type(path):

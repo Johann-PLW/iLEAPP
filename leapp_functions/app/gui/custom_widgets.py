@@ -165,16 +165,17 @@ class Caption(tk.Label):
 
 
 class LabeledEntry(tk.Frame):
-    """A small label above a field to type in."""
+    """A small label above a field to type in, on the background of a card (card_bg unless given)."""
 
-    def __init__(self, parent, app, field):
+    def __init__(self, parent, app, field, background=None):
         colors = self.colors = app.colors
-        super().__init__(parent, bg=colors.card_bg)
+        background = background or colors.card_bg
+        super().__init__(parent, bg=background)
         font = themes.mono(13) if field.mono else themes.sans(13)
 
-        self.title = tk.Frame(self, bg=colors.card_bg)
+        self.title = tk.Frame(self, bg=background)
         self.title.grid(row=0, column=0, sticky="ew")
-        tk.Label(self.title, text=field.label, anchor="w", bg=colors.card_bg,
+        tk.Label(self.title, text=field.label, anchor="w", bg=background,
                  fg=colors.text_secondary, font=themes.sans(10)).pack(side="left")
 
         self.box = tk.Frame(self, bg=colors.input_bg, highlightthickness=1,
