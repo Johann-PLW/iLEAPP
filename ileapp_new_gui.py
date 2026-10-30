@@ -23,13 +23,16 @@ TITLES = {key: title for key, title, _icon in STAGES} | {"review": "Review"}
 
 
 class PlaceholderScreen(tk.Frame):
-    """ An empty screen with its title, until the screen is built. """
+    """ An empty screen with its title, and a line that says it is not built yet. """
 
     def __init__(self, parent, app):
         super().__init__(parent, bg=app.colors.main_bg)
-        tk.Label(self, text=TITLES[app.app_state.step], bg=app.colors.main_bg,
-                 fg=app.colors.text_primary, font=themes.sans(28, "bold")).place(
-                     relx=0.5, rely=0.4, anchor="center")
+        texts = tk.Frame(self, bg=app.colors.main_bg)
+        texts.place(relx=0.5, rely=0.4, anchor="center")
+        tk.Label(texts, text=TITLES[app.app_state.step], bg=app.colors.main_bg,
+                 fg=app.colors.text_primary, font=themes.sans(28, "bold")).pack()
+        tk.Label(texts, text="This screen does not exist yet: work in progress", bg=app.colors.main_bg,
+                 fg=app.colors.text_secondary, font=themes.sans(14)).pack(pady=(6, 0))
 
 
 SCREENS = {"case": CaseScreen, "source": SourceScreen}
