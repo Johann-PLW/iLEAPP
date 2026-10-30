@@ -8,6 +8,7 @@ import base64
 import tkinter as tk
 from types import SimpleNamespace
 
+from leapp_functions.app import input_type
 from scripts.filetype import guess_mime
 from scripts.raw_image import selected_paths, selection_text
 
@@ -31,7 +32,8 @@ class AppState:
                                     notes=tk.StringVar(), logo_path=tk.StringVar(),
                                     logo_mimetype=tk.StringVar(), logo_base64=tk.StringVar())
 
-        self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar(), selection=[])
+        self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar(), selection=[],
+                                   detected=None)
         self.selected_artifacts = set()
 
         self.run_status = "idle"  # "idle" until a run starts, then "running", then "finished"
@@ -82,6 +84,20 @@ class AppState:
         return [path for path in selected_paths(self.run.source.get().strip(), self.run.selection)
                 if path]
 
+    def detect_source(self):
+        """ Look at the source. """
+        detected = input_type.detect(self.source_paths())
+        if detected != self.run.detected:
+            self.run.detected = detected
+            self.on_change()
+
+    def missing_for_source(self):
+        """ Why the source cannot be read before running processes. """
+        detected = self.run.detected
+        if detected is None:
+            return "Select an extraction first: nothing can be parsed without one."
+        return "" if detected.kind else detected.problem
+
     def stage(self):
         """The step of the five under the header that the screen on show belongs to."""
         return STAGE_OF.get(self.step, self.step)
@@ -93,8 +109,9 @@ class AppState:
 
     def missing_for_run(self):
         """What a run still needs: an extraction, an output folder and at least one artifact."""
-        if not self.run.source.get().strip():
-            return "Select an extraction first: nothing can be parsed without one."
+        missing = self.missing_for_source()
+        if missing:
+            return missing
         if not self.run.output.get().strip():
             return "Choose an output folder."
         if not self.selected_artifacts:
@@ -124,8 +141,11 @@ class AppState:
     def completed(self):
         """ The steps done, shown with a tick.
         The case data is optional: the step is done once the user has moved on from it.
+        The source is done once it can be read.
         """
         done = set()
         if "case" in self.left or not self.case_is_empty():
             done.add("case")
+        if not self.missing_for_source():
+            done.add("source")
         return done

@@ -129,7 +129,7 @@ class DetectedCard(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg=app.colors.main_bg)
         self.app = app
-        card = Card(self, app, "DETECTED")
+        card = Card(self, app, "DETECTED", accent=True)
         card.pack(fill="x")
         self.kind = Caption(card.body, app, "", card.background)
         self.kind.configure(fg=app.colors.text_primary, font=themes.sans(13, "bold"))
@@ -157,8 +157,9 @@ class DetectedCard(tk.Frame):
     def refresh(self):
         """ Show what the source is. """
         self.pending = None
-        colors = self.app.colors
-        detected = input_type.detect(self.app.app_state.source_paths())
+        colors, state = self.app.colors, self.app.app_state
+        state.detect_source()
+        detected = state.run.detected
         if detected is None:
             detected = input_type.Detected("", "Nothing selected",
                                            note="The type of the extraction shows here once it is chosen.")
