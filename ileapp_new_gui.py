@@ -63,6 +63,7 @@ class MainWindow(tk.Tk):
             self.bind_all("<Control-comma>", lambda _event: self.open_settings())
 
         self.bind("<Control-i>", lambda _event: self.focus_field("focus_input"))
+        self.bind("<Control-o>", lambda _event: self.focus_field("focus_output"))
 
         self.header = None
         self.body_frame = None

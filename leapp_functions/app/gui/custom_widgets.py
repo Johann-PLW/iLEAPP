@@ -257,3 +257,23 @@ class FileField(tk.Frame):
         # shown as well on another system
         self.shown.set(PureWindowsPath(path).name)
         self.button.set_text("Change" if path else "Choose")
+
+
+def show_example(field, app, variable, text):
+    """ A placeholder text in a LabeledEntry while it is empty. """
+    example = tk.Label(field.box, text=text, anchor="w", bg=app.colors.input_bg,
+                       fg=app.colors.text_legend, font=field.entry.cget("font"))
+    example.grid(row=0, column=0, sticky="w", padx=12)
+    # A click on the example is a click in the entry
+    example.bind("<Button-1>", lambda _event: field.entry.focus_set())
+
+    def refresh(*_args):
+        """ Shown only while the entry is empty. """
+        if variable.get():
+            example.grid_remove()
+        else:
+            example.grid()
+
+    trace = variable.trace_add("write", refresh)
+    example.bind("<Destroy>", lambda _event: variable.trace_remove("write", trace))
+    refresh()

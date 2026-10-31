@@ -11,6 +11,7 @@ from types import SimpleNamespace
 
 from leapp_functions import leapp
 from leapp_functions.app import input_type
+from leapp_functions.app.output import validate_output_folder_available
 from leapp_functions.app.unlock import UNLOCKERS, Unlock
 from scripts.filetype import guess_mime
 from scripts.raw_image import selected_paths, selection_text
@@ -38,6 +39,7 @@ class AppState:
                                     logo_mimetype=tk.StringVar(), logo_base64=tk.StringVar())
 
         self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar(), selection=[],
+                                   folder_name=tk.StringVar(),
                                    single_file=tk.BooleanVar(), detected=None, unlock=None,
                                    secrets={field["name"]: tk.StringVar()
                                             for field in (SECRETS.fields if SECRETS else ())})
@@ -154,11 +156,22 @@ class AppState:
         missing = self.missing_for_source()
         if missing:
             return missing
-        if not self.run.output.get().strip():
-            return "Choose an output folder."
+        missing = self.missing_for_output()
+        if missing:
+            return missing
         if not self.selected_artifacts:
             return "No artifact selected."
         return ""
+
+    def missing_for_output(self):
+        """ Why the report cannot be written. An empty folder name stands for the automatic one. """
+        folder = self.run.output.get().strip()
+        if not folder:
+            return "Choose an output folder."
+        if not os.path.isdir(folder):
+            return "This output folder does not exist."
+        _valid, error = validate_output_folder_available(folder, self.run.folder_name.get().strip())
+        return error or ""
 
     def ready_to_run(self):
         """ Whether a run has everything it needs: an extraction, an output folder and at least

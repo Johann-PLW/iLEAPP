@@ -16,7 +16,7 @@ from leapp_functions.app.gui.custom_widgets import OutlineButton
 TEXTS = {
     "case": ("Case data is optional", "It only decorates the header of the report",
              "Continue to Source"),
-    "source": ("One path is required", "The keychain and the output folder have defaults",
+    "source": ("The extraction and the output folder are required", "The keychain is optional",
                "Continue to Artifacts"),
     "artifacts": ("Choose what to parse", "", "Review and run"),
     "review": ("Ready to run", "The run takes place in the background: the window stays usable",

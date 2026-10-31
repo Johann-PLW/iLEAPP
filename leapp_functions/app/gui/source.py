@@ -11,7 +11,9 @@ from leapp_functions.app.gui import themes
 from leapp_functions.app.gui.app_state import SECRETS
 from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, Field, FileField,
                                                     LabeledEntry, OutlineButton, Tooltip,
-                                                    two_columns)
+                                                    show_example, two_columns)
+from leapp_functions.app.platform import sanitize_file_name
+from scripts.version_info import leapp_name
 from scripts.raw_image import (RAW_IMAGE_FILE_PATTERNS, RAW_IMAGE_LABEL, confirm_found_members,
                                selection_text)
 
@@ -35,6 +37,8 @@ class SourceScreen(tk.Frame):
         self.build_extraction(main)
         if SECRETS is not None:
             SecretsCard(main, app, SECRETS).grid(row=1, column=0, sticky="ew", pady=(GAP, 0))
+        self.output_card = OutputCard(main, app)
+        self.output_card.grid(row=2, column=0, sticky="ew", pady=(GAP, 0))
         DetectedCard(side, app).pack(fill="x")
 
     def build_extraction(self, main):
@@ -88,6 +92,10 @@ class SourceScreen(tk.Frame):
     def focus_input(self):
         """ Put the cursor in the source field: Ctrl+I """
         self.entry.focus_set()
+
+    def focus_output(self):
+        """ Put the cursor in the output field: Ctrl+O """
+        self.output_card.entry.focus_set()
 
     def images_text(self):
         """ What the tooltip says: the images picked together, nothing for one path. """
@@ -144,6 +152,93 @@ class SourceScreen(tk.Frame):
                 menu.add_command(
                     label=selection_text([history.format_path_for_display(path) for path in given]),
                     command=lambda given=given: self.state.set_source(given))
+        button = self.recent_button
+        try:
+            menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
+        finally:
+            menu.grab_release()
+
+
+class OutputCard(tk.Frame):
+    """ Path for the report. """
+
+    def __init__(self, parent, app):
+        super().__init__(parent, bg=app.colors.main_bg)
+        self.app = app
+        run = app.app_state.run
+        card = Card(self, app, "OUTPUT")
+        card.pack(fill="x")
+        body = card.body
+        body.columnconfigure(0, weight=1)
+
+        field = LabeledEntry(body, app, Field("Folder", run.output))
+        field.grid(row=0, column=0, sticky="ew")
+        self.entry = field.entry
+
+        buttons = tk.Frame(body, bg=card.background)
+        buttons.grid(row=1, column=0, sticky="w", pady=(12, 0))
+        OutlineButton(buttons, app, text="Folder…", command=self.choose_folder,
+                      style="in_card").pack(side="left", padx=(0, 8))
+        self.recent_button = OutlineButton(buttons, app, text="Recent ▾", command=self.show_recent,
+                                           style="in_card")
+        self.recent_button.pack(side="left")
+        self.recent_menu = tk.Menu(self, tearoff=0)
+
+        name = LabeledEntry(body, app, Field("Report folder name", run.folder_name))
+        name.grid(row=2, column=0, sticky="ew", pady=(12, 0))
+        # Characters a folder name cannot hold are refused as they are typed
+        name.entry.configure(validate="key", validatecommand=(
+            self.register(lambda proposed: sanitize_file_name(proposed) == proposed), "%P"))
+        show_example(name, app, run.folder_name,
+                     f"{leapp_name}_Output_<date>_<day>_<time>, given when the run starts")
+
+        self.problem = Caption(body, app, "", card.background)
+        self.problem.configure(fg=app.colors.text_leapp_color)
+        self.problem.grid(row=3, column=0, sticky="ew", pady=(12, 0))
+
+        traces = [(variable, variable.trace_add("write", lambda *_args: self.refresh()))
+                  for variable in (run.output, run.folder_name)]
+        self.bind("<Destroy>", lambda _event: self.stop(traces))
+        self.refresh(changed=False)
+
+    @staticmethod
+    def stop(traces):
+        """ The card is destroyed: the fields are no longer watched for it. """
+        for variable, trace in traces:
+            variable.trace_remove("write", trace)
+
+    def refresh(self, changed=True):
+        """ Indicate why the report cannot be written there. """
+        state = self.app.app_state
+        problem = state.missing_for_output() if state.run.output.get().strip() else ""
+        self.problem.configure(text=problem)
+        if problem:
+            self.problem.grid()
+        else:
+            self.problem.grid_remove()
+        if changed:
+            state.on_change()
+
+    def choose_folder(self):
+        """ Ask for the folder. """
+        folder = filedialog.askdirectory(parent=self.winfo_toplevel(), title="Select the output folder")
+        if folder:
+            self.app.app_state.run.output.set(folder)
+            history.record_output_path(folder)
+
+    def show_recent(self):
+        """ Open the menu of the recent output folders under its button. """
+        menu = self.recent_menu
+        menu.delete(0, "end")
+        output = self.app.app_state.run.output
+        if not history.is_history_enabled():
+            menu.add_command(label="(History disabled - enable it in Settings)", state="disabled")
+        elif not history.get_output_paths():
+            menu.add_command(label="(No recent paths)", state="disabled")
+        else:
+            for path in history.get_output_paths():
+                menu.add_command(label=history.format_path_for_display(path),
+                                 command=lambda path=path: output.set(path))
         button = self.recent_button
         try:
             menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
