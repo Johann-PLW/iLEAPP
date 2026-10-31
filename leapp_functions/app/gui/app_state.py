@@ -43,7 +43,7 @@ class AppState:
                                    single_file=tk.BooleanVar(), detected=None, unlock=None,
                                    secrets={field["name"]: tk.StringVar()
                                             for field in (SECRETS.fields if SECRETS else ())})
-        self.selected_artifacts = set()
+        self.artifacts = SimpleNamespace(loader=None, listed=[], selected=set())
 
         self.run_status = "idle"  # "idle" until a run starts, then "running", then "finished"
 
@@ -159,7 +159,7 @@ class AppState:
         missing = self.missing_for_output() or self.missing_for_secrets()
         if missing:
             return missing
-        if not self.selected_artifacts:
+        if not self.artifacts.selected:
             return "No artifact selected."
         return ""
 

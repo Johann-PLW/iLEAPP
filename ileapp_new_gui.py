@@ -9,6 +9,7 @@ from pathlib import Path
 from tkinter import messagebox, ttk
 
 from leapp_functions import leapp
+from leapp_functions.app import artifact_list
 from leapp_functions.app.gui import images, themes
 from leapp_functions.app.gui.app_state import AppState
 from leapp_functions.app.gui.header import Header
@@ -51,6 +52,7 @@ class MainWindow(tk.Tk):
         self.minsize(*MIN_SIZE)
 
         self.app_state = AppState(self.refresh_steps)
+        self.app_state.artifacts = artifact_list.load_artifacts()
         self.appearance = themes.Appearance(leapp.theme)
         ttk.Style(self).theme_use("clam")
 

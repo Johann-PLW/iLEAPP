@@ -64,7 +64,8 @@ class StatusBar(tk.Frame):
         colors, state = self.colors, self.app.app_state
         title, subtitle, next_text = TEXTS[state.step]
         if state.step == "artifacts":
-            subtitle = f"{len(state.selected_artifacts)} artifacts selected"
+            artifacts = state.artifacts
+            subtitle = f"{len(artifacts.selected)} of {len(artifacts.listed)} artifacts selected"
 
         # Next is blocked when the screen after this one cannot be reached. Of the screens
         # that move on to another one, only the review can be unreachable.
