@@ -8,8 +8,10 @@ from tkinter import filedialog, ttk
 from leapp_functions import leapp
 from leapp_functions.app import history, input_type
 from leapp_functions.app.gui import themes
-from leapp_functions.app.gui.custom_widgets import (Caption, Card, Field, LabeledEntry,
-                                                    OutlineButton, Tooltip, two_columns)
+from leapp_functions.app.gui.app_state import SECRETS
+from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, Field, FileField,
+                                                    LabeledEntry, OutlineButton, Tooltip,
+                                                    two_columns)
 from scripts.raw_image import (RAW_IMAGE_FILE_PATTERNS, RAW_IMAGE_LABEL, confirm_found_members,
                                selection_text)
 
@@ -31,6 +33,8 @@ class SourceScreen(tk.Frame):
 
         main, side = two_columns(self, app)
         self.build_extraction(main)
+        if SECRETS is not None:
+            SecretsCard(main, app, SECRETS).grid(row=1, column=0, sticky="ew", pady=(GAP, 0))
         DetectedCard(side, app).pack(fill="x")
 
     def build_extraction(self, main):
@@ -145,6 +149,50 @@ class SourceScreen(tk.Frame):
             menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
         finally:
             menu.grab_release()
+
+
+class SecretsCard(tk.Frame):
+    """ The files that decrypt what some apps keep encrypted, as the configuration file lists them. """
+
+    def __init__(self, parent, app, secrets):
+        super().__init__(parent, bg=app.colors.main_bg)
+        self.app = app
+        card = Card(self, app, secrets.title)
+        card.pack(fill="x")
+        card.body.columnconfigure(0, weight=1)
+        for row, field in enumerate(secrets.fields):
+            self.build_file_field(card.body, row, field)
+        Caption(card.body, app, secrets.hint, card.background).grid(
+            row=len(secrets.fields), column=0, sticky="ew", pady=(12, 0))
+
+    def build_file_field(self, body, row, field):
+        """ A file to choose. """
+        variable = self.app.app_state.run.secrets[field["name"]]
+        line = tk.Frame(body, bg=self.app.colors.card_bg)
+        line.grid(row=row, column=0, sticky="ew", pady=(12 if row else 0, 0))
+        line.columnconfigure(0, weight=1)
+        FileField(line, self.app, Field(field["label"], variable,
+                                        pick=lambda: self.choose(field, variable))).grid(
+            row=0, column=0, sticky="ew")
+        clear = OutlineButton(line, self.app, text="Clear", command=lambda: variable.set(""),
+                              style="in_card")
+        clear.grid(row=0, column=1, sticky="s", padx=(8, 0))
+
+        def refresh(*_args):
+            """ Clear can be used only when a file is chosen. """
+            clear.set_enabled(bool(variable.get()))
+
+        trace = variable.trace_add("write", refresh)
+        clear.bind("<Destroy>", lambda _event: variable.trace_remove("write", trace))
+        refresh()
+
+    def choose(self, field, variable):
+        """ Ask for the file. Cancelling leaves the field as it was. """
+        path = filedialog.askopenfilename(
+            parent=self.winfo_toplevel(), title=f"Choose the {field['label'].lower()}",
+            filetypes=[tuple(filetype) for filetype in field["filetypes"]])
+        if path:
+            variable.set(path)
 
 
 class DetectedCard(tk.Frame):

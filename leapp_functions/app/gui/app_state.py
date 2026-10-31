@@ -9,12 +9,15 @@ import os
 import tkinter as tk
 from types import SimpleNamespace
 
+from leapp_functions import leapp
 from leapp_functions.app import input_type
 from leapp_functions.app.unlock import UNLOCKERS, Unlock
 from scripts.filetype import guess_mime
 from scripts.raw_image import selected_paths, selection_text
 
 ORDER = ("case", "source", "artifacts", "review", "run", "results")
+
+SECRETS = getattr(leapp, "secrets", None)
 STAGE_OF = {"review": "run"}
 
 CASE_KEYS = {"Case Number": "number", "Agency": "agency", "Agency Logo Path": "logo_path",
@@ -35,7 +38,9 @@ class AppState:
                                     logo_mimetype=tk.StringVar(), logo_base64=tk.StringVar())
 
         self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar(), selection=[],
-                                   single_file=tk.BooleanVar(), detected=None, unlock=None)
+                                   single_file=tk.BooleanVar(), detected=None, unlock=None,
+                                   secrets={field["name"]: tk.StringVar()
+                                            for field in (SECRETS.fields if SECRETS else ())})
         self.selected_artifacts = set()
 
         self.run_status = "idle"  # "idle" until a run starts, then "running", then "finished"

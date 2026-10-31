@@ -8,6 +8,14 @@
   "casedata_extension": ".lcasedata",
   "source_hint": "A tar, zip or gz archive, a disk image (raw image, E01, AFF, DMG or virtual disk, L01 or AD1), or a folder holding an iOS full file system extraction or a backup. Several disk images of a RAID set can be picked together.",
   "input_types": ["fs", "tar", "gz", "zip", "raw", "itunes", "file"],
+  "secrets": {
+    "title": "KEYCHAIN",
+    "hint": "Optional. Captured from the device apart from the extraction.",
+    "fields": [
+      {"name": "keychain", "label": "Keychain file",
+       "filetypes": [["Keychain files", "*.plist *.xml"], ["All files", "*"]]}
+    ]
+  },
   "theme": {
     "dark": {
       "border": "#565556",

@@ -66,8 +66,8 @@ class MainWindow(tk.Tk):
 
         self.header = None
         self.body_frame = None
-        # The steps, the status bar and the screen of the step, by name
         self.widgets = {}
+        self.unlock_watch = None
 
         self.build()
         self.fix_size()
@@ -182,7 +182,14 @@ class MainWindow(tk.Tk):
     def watch_unlock(self):
         """ Follow the sequence that opens the source, whatever the screen on show. """
         self.app_state.poll_unlock()
-        self.after(UNLOCK_POLL, self.watch_unlock)
+        self.unlock_watch = self.after(UNLOCK_POLL, self.watch_unlock)
+
+    def destroy(self):
+        """ Stop following the sequence before the window goes. """
+        if self.unlock_watch is not None:
+            self.after_cancel(self.unlock_watch)
+            self.unlock_watch = None
+        super().destroy()
 
     def refresh_steps(self):
         """ Redraw the steps ans status bar after the application state changes. """
