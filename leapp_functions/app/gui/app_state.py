@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 from leapp_functions import leapp
 from leapp_functions.app import input_type
-from leapp_functions.app.output import validate_output_folder_available
+from leapp_functions.app.output import resolve_output_folder_name, validate_output_folder_available
 from leapp_functions.app.unlock import UNLOCKERS, Unlock
 from scripts.filetype import guess_mime
 from scripts.raw_image import selected_paths, selection_text
@@ -156,7 +156,7 @@ class AppState:
         missing = self.missing_for_source()
         if missing:
             return missing
-        missing = self.missing_for_output()
+        missing = self.missing_for_output() or self.missing_for_secrets()
         if missing:
             return missing
         if not self.selected_artifacts:
@@ -170,8 +170,19 @@ class AppState:
             return "Choose an output folder."
         if not os.path.isdir(folder):
             return "This output folder does not exist."
-        _valid, error = validate_output_folder_available(folder, self.run.folder_name.get().strip())
+        name = self.run.folder_name.get().strip()
+        _valid, error = validate_output_folder_available(folder, name)
+        if error and os.path.exists(os.path.join(folder, resolve_output_folder_name(name))):
+            return f"A folder named {name} is already in the output folder."
         return error or ""
+
+    def missing_for_secrets(self):
+        """ A file chosen to decrypt apps that is no longer there. """
+        for name, variable in self.run.secrets.items():
+            path = variable.get()
+            if path and not os.path.isfile(path):
+                return f"The {name} file no longer exists."
+        return ""
 
     def ready_to_run(self):
         """ Whether a run has everything it needs: an extraction, an output folder and at least

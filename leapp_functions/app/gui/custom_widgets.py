@@ -6,13 +6,13 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 
-from leapp_functions.app.gui import images, themes
+from leapp_functions.app.gui import themes
 
 
 BORDER = 2
 TOOLTIP_DELAY = 500
 TOOLTIP_WIDTH = 520
-INFO_SIZE = 14
+ENTRY_PADY = 4
 SIDE_WIDTH = 300
 GAP = 14
 
@@ -165,7 +165,7 @@ class Caption(tk.Label):
 
 
 class LabeledEntry(tk.Frame):
-    """A small label above a field to type in, on the background of a card (card_bg unless given)."""
+    """A small label above a field to type in. """
 
     def __init__(self, parent, app, field, background=None):
         colors = self.colors = app.colors
@@ -174,19 +174,20 @@ class LabeledEntry(tk.Frame):
         font = themes.mono(13) if field.mono else themes.sans(13)
 
         self.title = tk.Frame(self, bg=background)
-        self.title.grid(row=0, column=0, sticky="ew")
+        if field.label:
+            self.title.grid(row=0, column=0, sticky="ew", pady=(0, 5))
         tk.Label(self.title, text=field.label, anchor="w", bg=background,
                  fg=colors.text_secondary, font=themes.sans(10)).pack(side="left")
 
         self.box = tk.Frame(self, bg=colors.input_bg, highlightthickness=1,
                             highlightbackground=colors.line,
                             highlightcolor=colors.line)
-        self.box.grid(row=1, column=0, sticky="ew", pady=(5, 0))
+        self.box.grid(row=1, column=0, sticky="ew")
         self.box.columnconfigure(0, weight=1)
         self.entry = tk.Entry(self.box, textvariable=field.variable, font=font, bg=colors.input_bg,
                               fg=colors.text_primary, insertbackground=colors.text_primary, relief="flat",
                               borderwidth=0, highlightthickness=0)
-        self.entry.grid(row=0, column=0, sticky="ew", padx=12, ipady=8)
+        self.entry.grid(row=0, column=0, sticky="ew", padx=12, ipady=ENTRY_PADY)
         self.entry.bind("<FocusIn>", lambda _event: self.set_border(colors.border))
         self.entry.bind("<FocusOut>", lambda _event: self.set_border(colors.line))
 
@@ -212,16 +213,7 @@ class FileField(tk.Frame):
         entry.configure(textvariable=self.shown, state="readonly",
                         readonlybackground=colors.input_bg)
 
-        # The icon after the label says that there is a tooltip.
-        self.info = tk.Label(self.labeled.title, bg=colors.card_bg, padx=0, pady=0, borderwidth=0)
-        # The line of the label is as high as the icon, with or without it: nothing jumps
-        self.labeled.rowconfigure(0, minsize=INFO_SIZE)
-        self.info.image = images.load_disc_icon("info-small", INFO_SIZE, colors.text_secondary,
-                                                colors.card_bg)
-        self.info.configure(image=self.info.image)
-
-        # The entry shows the name only: the tooltip gives the whole path. The pointer on the
-        # entry, on its box or on the icon colours the border of the box too.
+        # The entry shows the name only: the tooltip gives the whole path.
         hovered = self.hover_widgets()
         self.tooltip = Tooltip(hovered, app, field.variable.get)
         for widget in hovered:
@@ -238,7 +230,7 @@ class FileField(tk.Frame):
 
     def hover_widgets(self):
         """ The widgets that show the tooltip when the pointer is on them. """
-        return (self.labeled.box, self.labeled.entry, self.info)
+        return (self.labeled.box, self.labeled.entry)
 
     def hover(self, _event=None):
         """ Colour the border of the box while the pointer is on the field and there is a tooltip to read. """
@@ -249,10 +241,6 @@ class FileField(tk.Frame):
     def refresh(self):
         """ Show the name of the file, and Choose or Change depending on whether one has been picked. """
         path = self.variable.get()
-        if path:
-            self.info.pack(side="left", padx=(6, 0))
-        else:
-            self.info.pack_forget()
         # PureWindowsPath reads both / and \ as separators: a path saved on Windows is
         # shown as well on another system
         self.shown.set(PureWindowsPath(path).name)
@@ -261,10 +249,9 @@ class FileField(tk.Frame):
 
 def show_example(field, app, variable, text):
     """ A placeholder text in a LabeledEntry while it is empty. """
-    example = tk.Label(field.box, text=text, anchor="w", bg=app.colors.input_bg,
+    example = tk.Label(field.box, text=text, anchor="w", width=1, bg=app.colors.input_bg,
                        fg=app.colors.text_legend, font=field.entry.cget("font"))
-    example.grid(row=0, column=0, sticky="w", padx=12)
-    # A click on the example is a click in the entry
+    example.grid(row=0, column=0, sticky="ew", padx=12)
     example.bind("<Button-1>", lambda _event: field.entry.focus_set())
 
     def refresh(*_args):

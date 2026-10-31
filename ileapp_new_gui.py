@@ -148,6 +148,16 @@ class MainWindow(tk.Tk):
         screen = SCREENS.get(step, PlaceholderScreen)(self.body_frame, self)
         screen.grid(row=1, column=0, sticky='nsew')
         self.widgets["screen"] = screen
+        self.fit_screen()
+
+    def fit_screen(self):
+        """ Make the window bigger when the screen on show needs more room than it has, within the
+        display. It never gets smaller: a size the user gave it is kept when it is enough. """
+        self.update_idletasks()
+        width = min(max(self.winfo_width(), self.winfo_reqwidth()), self.winfo_screenwidth())
+        height = min(max(self.winfo_height(), self.winfo_reqheight()), self.winfo_screenheight())
+        if (width, height) != (self.winfo_width(), self.winfo_height()):
+            self.geometry(f"{width}x{height}")
 
     def go(self, step):
         """ Navigate to a step when the current application state allows it. """
@@ -194,7 +204,7 @@ class MainWindow(tk.Tk):
 
     def refresh_steps(self):
         """ Redraw the steps ans status bar after the application state changes. """
-        for name in ("steps", "status_bar"):
+        for name in ("steps", "status_bar", "checks"):
             if name in self.widgets:
                 self.widgets[name].refresh()
 

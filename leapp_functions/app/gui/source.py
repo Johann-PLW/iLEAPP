@@ -2,18 +2,19 @@
 The Source screen: the extraction to parse, where the keychain and the report go.
 """
 
+import os
 import tkinter as tk
 from tkinter import filedialog, ttk
 
 from leapp_functions import leapp
 from leapp_functions.app import history, input_type
-from leapp_functions.app.gui import themes
+from leapp_functions.app.gui import images, themes
 from leapp_functions.app.gui.app_state import SECRETS
 from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, Field, FileField,
                                                     LabeledEntry, OutlineButton, Tooltip,
                                                     show_example, two_columns)
+from leapp_functions.app.output import default_output_folder_name
 from leapp_functions.app.platform import sanitize_file_name
-from scripts.version_info import leapp_name
 from scripts.raw_image import (RAW_IMAGE_FILE_PATTERNS, RAW_IMAGE_LABEL, confirm_found_members,
                                selection_text)
 
@@ -40,6 +41,7 @@ class SourceScreen(tk.Frame):
         self.output_card = OutputCard(main, app)
         self.output_card.grid(row=2, column=0, sticky="ew", pady=(GAP, 0))
         DetectedCard(side, app).pack(fill="x")
+        ChecksCard(side, app).pack(fill="x", pady=(GAP, 0))
 
     def build_extraction(self, main):
         """ The card with the path of the extraction and the buttons that fill it in. """
@@ -47,14 +49,15 @@ class SourceScreen(tk.Frame):
         card.grid(row=0, column=0, sticky="ew")
         card.body.columnconfigure(0, weight=1)
 
-        field = LabeledEntry(card.body, self.app,
-                             Field("File or folder", self.state.run.source))
-        field.grid(row=0, column=0, sticky="ew")
+        Caption(card.body, self.app, leapp.source_hint, card.background).grid(
+            row=0, column=0, sticky="ew")
+        field = LabeledEntry(card.body, self.app, Field("", self.state.run.source))
+        field.grid(row=1, column=0, sticky="ew", pady=(6, 0))
         self.entry = field.entry
         Tooltip((field.box, field.entry), self.app, self.images_text)
 
         buttons = tk.Frame(card.body, bg=card.background)
-        buttons.grid(row=1, column=0, sticky="w", pady=(12, 0))
+        buttons.grid(row=2, column=0, sticky="w", pady=(12, 0))
         created = {}
         for text, command in (("Folder…", self.choose_folder), ("Files…", self.choose_files),
                               ("Recent ▾", self.show_recent)):
@@ -64,18 +67,15 @@ class SourceScreen(tk.Frame):
         self.recent_button = created["Recent ▾"]
 
         if "file" in input_type.SUPPORTED:
-            self.build_single_file(card.body)
-
-        Caption(card.body, self.app, leapp.source_hint, card.background).grid(
-            row=3, column=0, sticky="ew", pady=(12, 0))
+            self.build_single_file(buttons)
 
         self.recent_menu = tk.Menu(self, tearoff=0)
 
-    def build_single_file(self, body):
-        """ The box that has one file read as it is (-t file). """
-        self.single_file = ttk.Checkbutton(body, text="Read as a single file", style="Card.TCheckbutton",
+    def build_single_file(self, buttons):
+        """ The box that has one file read as it is (-t file), after the buttons. """
+        self.single_file = ttk.Checkbutton(buttons, text="Read as a single file", style="Card.TCheckbutton",
                                            variable=self.state.run.single_file)
-        self.single_file.grid(row=2, column=0, sticky="w", pady=(12, 0))
+        self.single_file.pack(side="left", padx=(8, 0))
         self.allow_single_file()
 
         variable = self.state.run.source
@@ -166,58 +166,47 @@ class OutputCard(tk.Frame):
         super().__init__(parent, bg=app.colors.main_bg)
         self.app = app
         run = app.app_state.run
-        card = Card(self, app, "OUTPUT")
+        card = Card(self, app, "OUTPUT FOLDER")
         card.pack(fill="x")
         body = card.body
         body.columnconfigure(0, weight=1)
 
-        field = LabeledEntry(body, app, Field("Folder", run.output))
+        folder_line = tk.Frame(body, bg=card.background)
+        folder_line.grid(row=0, column=0, sticky="ew")
+        folder_line.columnconfigure(0, weight=1)
+        field = LabeledEntry(folder_line, app, Field("", run.output))
         field.grid(row=0, column=0, sticky="ew")
         self.entry = field.entry
-
-        buttons = tk.Frame(body, bg=card.background)
-        buttons.grid(row=1, column=0, sticky="w", pady=(12, 0))
-        OutlineButton(buttons, app, text="Folder…", command=self.choose_folder,
-                      style="in_card").pack(side="left", padx=(0, 8))
-        self.recent_button = OutlineButton(buttons, app, text="Recent ▾", command=self.show_recent,
+        Tooltip((field.box, field.entry), app, lambda: run.output.get().strip())
+        OutlineButton(folder_line, app, text="Folder…", command=self.choose_folder,
+                      style="in_card").grid(row=0, column=1, padx=(8, 0))
+        self.recent_button = OutlineButton(folder_line, app, text="Recent ▾", command=self.show_recent,
                                            style="in_card")
-        self.recent_button.pack(side="left")
+        self.recent_button.grid(row=0, column=2, padx=(8, 0))
         self.recent_menu = tk.Menu(self, tearoff=0)
 
-        name = LabeledEntry(body, app, Field("Report folder name", run.folder_name))
-        name.grid(row=2, column=0, sticky="ew", pady=(12, 0))
+        name_line = tk.Frame(body, bg=card.background)
+        name_line.grid(row=1, column=0, sticky="ew", pady=(12, 0))
+        name_line.columnconfigure(1, weight=1)
+        tk.Label(name_line, text="Report folder name", bg=card.background,
+                 fg=app.colors.text_secondary, font=themes.sans(10)).grid(row=0, column=0, padx=(0, 8))
+        name = LabeledEntry(name_line, app, Field("", run.folder_name))
+        name.grid(row=0, column=1, sticky="ew")
+        name.entry.configure(width=8)
         # Characters a folder name cannot hold are refused as they are typed
         name.entry.configure(validate="key", validatecommand=(
             self.register(lambda proposed: sanitize_file_name(proposed) == proposed), "%P"))
-        show_example(name, app, run.folder_name,
-                     f"{leapp_name}_Output_<date>_<day>_<time>, given when the run starts")
+        show_example(name, app, run.folder_name, f"Automatic: {default_output_folder_name()}")
 
-        self.problem = Caption(body, app, "", card.background)
-        self.problem.configure(fg=app.colors.text_leapp_color)
-        self.problem.grid(row=3, column=0, sticky="ew", pady=(12, 0))
-
-        traces = [(variable, variable.trace_add("write", lambda *_args: self.refresh()))
+        traces = [(variable, variable.trace_add("write", lambda *_args: app.app_state.on_change()))
                   for variable in (run.output, run.folder_name)]
         self.bind("<Destroy>", lambda _event: self.stop(traces))
-        self.refresh(changed=False)
 
     @staticmethod
     def stop(traces):
         """ The card is destroyed: the fields are no longer watched for it. """
         for variable, trace in traces:
             variable.trace_remove("write", trace)
-
-    def refresh(self, changed=True):
-        """ Indicate why the report cannot be written there. """
-        state = self.app.app_state
-        problem = state.missing_for_output() if state.run.output.get().strip() else ""
-        self.problem.configure(text=problem)
-        if problem:
-            self.problem.grid()
-        else:
-            self.problem.grid_remove()
-        if changed:
-            state.on_change()
 
     def choose_folder(self):
         """ Ask for the folder. """
@@ -257,8 +246,6 @@ class SecretsCard(tk.Frame):
         card.body.columnconfigure(0, weight=1)
         for row, field in enumerate(secrets.fields):
             self.build_file_field(card.body, row, field)
-        Caption(card.body, app, secrets.hint, card.background).grid(
-            row=len(secrets.fields), column=0, sticky="ew", pady=(12, 0))
 
     def build_file_field(self, body, row, field):
         """ A file to choose. """
@@ -277,17 +264,86 @@ class SecretsCard(tk.Frame):
             """ Clear can be used only when a file is chosen. """
             clear.set_enabled(bool(variable.get()))
 
-        trace = variable.trace_add("write", refresh)
+        def changed(*_args):
+            """ A file chosen or cleared. """
+            refresh()
+            self.app.app_state.on_change()
+
+        trace = variable.trace_add("write", changed)
         clear.bind("<Destroy>", lambda _event: variable.trace_remove("write", trace))
         refresh()
 
     def choose(self, field, variable):
         """ Ask for the file. Cancelling leaves the field as it was. """
         path = filedialog.askopenfilename(
-            parent=self.winfo_toplevel(), title=f"Choose the {field['label'].lower()}",
+            parent=self.winfo_toplevel(), title=f"Choose the {field['name']} file",
             filetypes=[tuple(filetype) for filetype in field["filetypes"]])
         if path:
             variable.set(path)
+
+
+class ChecksCard(tk.Frame):
+    """ What the Source screen still lacks for a run, one line for each card of the left column. """
+
+    MARKS = {"ok": ("circle-check", "text_primary"), "problem": ("circle-x", "text_leapp_color"),
+             "optional": ("circle-minus", "text_secondary")}
+
+    def __init__(self, parent, app):
+        super().__init__(parent, bg=app.colors.main_bg)
+        self.app = app
+        self.card = Card(self, app, "BEFORE RUNNING")
+        self.card.pack(fill="x")
+        self.card.body.columnconfigure(1, weight=1)
+        # Told by the window whenever the state changes (MainWindow.refresh_steps)
+        app.widgets["checks"] = self
+        self.bind("<Destroy>", lambda _event: self.forget_me())
+        self.refresh()
+
+    def forget_me(self):
+        """ The card is destroyed. """
+        if self.app.widgets.get("checks") is self:
+            del self.app.widgets["checks"]
+
+    def refresh(self):
+        """ The lines, built again from the state. """
+        for child in self.card.body.winfo_children():
+            child.destroy()
+        for row, (status, text) in enumerate(self.lines()):
+            self.line(row, status, text)
+
+    def lines(self):
+        """ (status, text) for each card of the left column, in the same order. """
+        state = self.app.app_state
+        if state.run.detected is None:
+            lines = [("problem", "Extraction: none chosen yet.")]
+        elif state.missing_for_source():
+            lines = [("problem", "Extraction: cannot be read yet, see DETECTED.")]
+        else:
+            lines = [("ok", "Extraction: ready.")]
+        for name, variable in state.run.secrets.items():
+            path = variable.get()
+            if not path:
+                lines.append(("optional", f"{name.capitalize()}: optional, none chosen."))
+            elif not os.path.isfile(path):
+                lines.append(("problem", f"{name.capitalize()}: the file no longer exists."))
+            else:
+                lines.append(("ok", f"{name.capitalize()}: {os.path.basename(path)}"))
+        output = state.missing_for_output()
+        lines.append(("problem", f"Output: {output}") if output else ("ok", "Output: ready."))
+        return lines
+
+    def line(self, row, status, text):
+        """ A mark, then the text in the colour of the mark. """
+        colors = self.app.colors
+        icon, role = self.MARKS[status]
+        color = getattr(colors, role)
+        mark = tk.Label(self.card.body, bg=self.card.background, borderwidth=0)
+        mark.image = images.load_icon(icon, 16, color)
+        mark.configure(image=mark.image)
+        mark.grid(row=row, column=0, sticky="nw", pady=(2 if row else 0, 0))
+        caption = Caption(self.card.body, self.app, text, self.card.background)
+        caption.configure(fg=color)
+        caption.grid(row=row, column=1, sticky="ew", padx=(8, 0), pady=(2 if row else 0, 0))
 
 
 class DetectedCard(tk.Frame):
@@ -388,6 +444,7 @@ class UnlockPanel(tk.Frame):
         for child in self.winfo_children():
             child.destroy()
         if unlock is None:
+            self.configure(height=1)
             return
         tk.Frame(self, bg=self.background, height=12).pack(fill="x")
         colors = self.app.colors

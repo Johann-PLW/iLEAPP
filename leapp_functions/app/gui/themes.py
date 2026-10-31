@@ -116,6 +116,7 @@ def apply_styles(style, colors):
                   foreground=[("disabled", disabled_text), ("pressed", hover_text),
                               ("active", hover_text)],
                   bordercolor=states, lightcolor=states, darkcolor=states, focuscolor=states)
+    style.configure("Field.TButton", padding=(18, 3, 18, 4))
     style_check_box(style, colors)
 
 
