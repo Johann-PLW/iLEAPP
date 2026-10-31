@@ -14,6 +14,7 @@ from leapp_functions.app.gui import images, themes
 from leapp_functions.app.gui.app_state import AppState
 from leapp_functions.app.gui.header import Header
 from leapp_functions.app.gui.steps import STAGES, Steps
+from leapp_functions.app.gui.artifacts import ArtifactsScreen
 from leapp_functions.app.gui.case import CaseScreen
 from leapp_functions.app.gui.source import SourceScreen
 from leapp_functions.app.gui.status_bar import StatusBar
@@ -37,7 +38,7 @@ class PlaceholderScreen(tk.Frame):
                  fg=app.colors.text_secondary, font=themes.sans(14)).pack(pady=(6, 0))
 
 
-SCREENS = {"case": CaseScreen, "source": SourceScreen}
+SCREENS = {"case": CaseScreen, "source": SourceScreen, "artifacts": ArtifactsScreen}
 
 
 class MainWindow(tk.Tk):
@@ -66,6 +67,7 @@ class MainWindow(tk.Tk):
 
         self.bind("<Control-i>", lambda _event: self.focus_field("focus_input"))
         self.bind("<Control-o>", lambda _event: self.focus_field("focus_output"))
+        self.bind("<Control-f>", lambda _event: self.focus_field("focus_search"))
 
         self.header = None
         self.body_frame = None
