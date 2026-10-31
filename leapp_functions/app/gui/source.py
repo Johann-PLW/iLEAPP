@@ -41,7 +41,7 @@ class SourceScreen(tk.Frame):
         self.output_card = OutputCard(main, app)
         self.output_card.grid(row=2, column=0, sticky="ew", pady=(GAP, 0))
         DetectedCard(side, app).pack(fill="x")
-        ChecksCard(side, app).pack(fill="x", pady=(GAP, 0))
+        ChecksCard(side, app).pack(fill="x", pady=(2 * GAP, 0))
 
     def build_extraction(self, main):
         """ The card with the path of the extraction and the buttons that fill it in. """
@@ -285,13 +285,13 @@ class SecretsCard(tk.Frame):
 class ChecksCard(tk.Frame):
     """ What the Source screen still lacks for a run, one line for each card of the left column. """
 
-    MARKS = {"ok": ("circle-check", "text_primary"), "problem": ("circle-x", "text_leapp_color"),
-             "optional": ("circle-minus", "text_secondary")}
+    MARKS = {"ok": ("circle-check", "text_primary"), "todo": ("circle", "text_primary"),
+             "problem": ("circle-x", "text_error"), "optional": ("circle-minus", "text_secondary")}
 
     def __init__(self, parent, app):
         super().__init__(parent, bg=app.colors.main_bg)
         self.app = app
-        self.card = Card(self, app, "BEFORE RUNNING")
+        self.card = Card(self, app, "BEFORE RUNNING", accent=True)
         self.card.pack(fill="x")
         self.card.body.columnconfigure(1, weight=1)
         # Told by the window whenever the state changes (MainWindow.refresh_steps)
@@ -315,7 +315,7 @@ class ChecksCard(tk.Frame):
         """ (status, text) for each card of the left column, in the same order. """
         state = self.app.app_state
         if state.run.detected is None:
-            lines = [("problem", "Extraction: none chosen yet.")]
+            lines = [("todo", "Extraction: none chosen yet.")]
         elif state.missing_for_source():
             lines = [("problem", "Extraction: cannot be read yet, see DETECTED.")]
         else:
@@ -329,7 +329,10 @@ class ChecksCard(tk.Frame):
             else:
                 lines.append(("ok", f"{name.capitalize()}: {os.path.basename(path)}"))
         output = state.missing_for_output()
-        lines.append(("problem", f"Output: {output}") if output else ("ok", "Output: ready."))
+        if not state.run.output.get().strip():
+            lines.append(("todo", f"Output: {output}"))
+        else:
+            lines.append(("problem", f"Output: {output}") if output else ("ok", "Output: ready."))
         return lines
 
     def line(self, row, status, text):
@@ -392,7 +395,7 @@ class DetectedCard(tk.Frame):
                                            note="The type of the extraction shows here once it is chosen.")
         self.kind.configure(text=detected.label)
         detail = detected.problem or detected.note
-        self.detail.configure(text=detail, fg=colors.text_leapp_color if detected.problem
+        self.detail.configure(text=detail, fg=colors.text_error if detected.problem
                               else colors.text_secondary)
         if detail:
             self.detail.pack(fill="x", pady=(6, 0), before=self.unlock_panel)
@@ -450,7 +453,7 @@ class UnlockPanel(tk.Frame):
         colors = self.app.colors
         message = unlock.shown.message
         if message is not None:
-            self.text(message.text, colors.text_leapp_color if message.kind == "error"
+            self.text(message.text, colors.text_error if message.kind == "error"
                       else colors.text_secondary)
         question = unlock.shown.waiting
         if question is None:
@@ -478,7 +481,7 @@ class UnlockPanel(tk.Frame):
         elif unlock.result is not None:
             self.text("Opened: ready to be read.", colors.text_secondary)
         else:
-            self.text("Not opened.", colors.text_leapp_color)
+            self.text("Not opened.", colors.text_error)
             self.buttons(("Try again", self.try_again))
 
     def build_secret(self, unlock, question):

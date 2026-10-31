@@ -119,14 +119,14 @@ class Card(tk.Frame):
     def __init__(self, parent, app, title="", accent=False):
         colors = self.colors = app.colors
         self.background = colors.card_accent if accent else colors.card_bg
-        super().__init__(parent, bg=self.background, highlightthickness=1,
-                         highlightbackground=colors.border,
-                         highlightcolor=colors.border)
+        border = colors.header_bg if accent else colors.border
+        super().__init__(parent, bg=self.background, highlightthickness=BORDER if accent else 1,
+                         highlightbackground=border, highlightcolor=border)
         inner = tk.Frame(self, bg=self.background)
         inner.pack(fill="both", expand=True, padx=16, pady=(10, 14))
         if title:
-            tk.Label(inner, text=title, anchor="w", bg=self.background, fg=colors.text_leapp_color,
-                     font=themes.sans(10, "bold")).pack(fill="x", pady=(0, 4))
+            tk.Label(inner, text=title, anchor="w", bg=self.background, fg=colors.text_primary,
+                     font=themes.sans(12, "bold")).pack(fill="x", pady=(0, 4))
         self.body = tk.Frame(inner, bg=self.background)
         self.body.pack(fill="both", expand=True)
 

@@ -74,7 +74,7 @@ class StatusBar(tk.Frame):
         self.title_label.configure(text=title)
         self.subtitle_label.configure(
             text=state.missing_for_run() if blocked else subtitle,
-            fg=colors.text_leapp_color if blocked else colors.text_legend)
+            fg=colors.text_error if blocked else colors.text_legend)
 
         # Only one of the two is shown. grid_remove() hides a widget and keeps where it was
         # placed, which grid() brings back.

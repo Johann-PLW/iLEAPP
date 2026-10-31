@@ -19,16 +19,16 @@ CHECK_BOX_PICTURES = {}
 ROLES = frozenset((
     "border",  # A card's border, an input's border with the focus, the line above the status bar
     "button_border",  # The border of a quiet button and of a button in a card
-    "card_accent",  # The background of the report preview card, which shows what the report will hold
+    "card_accent",  # The background of a card that sums up (report preview, detected), a shade apart from card_bg
     "card_bg",  # The background of a card and of its labels
-    "header_bg",  # The header background color, identical in both themes
+    "header_bg",  # The header background color, identical in both themes, the border of an accent card
     "input_bg",  # The background of an input
     "line",  # The lines between the steps, an input's border, the fill of a button in a card
     "main_bg",  # The main window background color
     "progress",  # The line of the steps, from the first one to the one on show
-    "text_leapp_color",  # The title of a card, the subtitle of the status bar when Next is blocked
+    "text_error",  # A problem, the subtitle of the status bar when Next is blocked: red in every LEAPP
     "text_legend",  # The subtitle of the status bar, the text of a button that cannot be used
-    "text_primary",  # The text of titles, inputs and buttons, the icon of a step on show or done
+    "text_primary",  # The text of titles (cards too), inputs and buttons, the icon of a step on show or done
     "text_secondary",  # The label above an input, the icon and title of a step not reached
 ))
 
