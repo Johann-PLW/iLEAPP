@@ -11,8 +11,7 @@ import tkinter as tk
 from leapp_functions.app.gui import themes
 from leapp_functions.app.gui.custom_widgets import OutlineButton
 
-# For each screen: its title, its subtitle and the text of its main button. The subtitle of
-# Artifacts is worked out when it is shown, from the number of artifacts selected.
+# For each screen: its title, its subtitle and the text of its main button.
 TEXTS = {
     "case": ("Case data is optional", "It only decorates the header of the report",
              "Continue to Source"),
@@ -66,6 +65,9 @@ class StatusBar(tk.Frame):
         if state.step == "artifacts":
             artifacts = state.artifacts
             subtitle = f"{len(artifacts.selected)} of {len(artifacts.listed)} artifacts selected"
+            left_out = sum(not artifact.default for artifact in artifacts.listed)
+            if left_out:
+                subtitle += f" · {left_out} slow or large ones are unselected by default"
 
         # Next is blocked when the screen after this one cannot be reached. Of the screens
         # that move on to another one, only the review can be unreachable.
@@ -75,7 +77,7 @@ class StatusBar(tk.Frame):
         self.title_label.configure(text=title)
         self.subtitle_label.configure(
             text=state.missing_for_run() if blocked else subtitle,
-            fg=colors.text_error if blocked else colors.text_legend)
+            fg=colors.text_error if blocked else colors.text_secondary)
 
         # Only one of the two is shown. grid_remove() hides a widget and keeps where it was
         # placed, which grid() brings back.

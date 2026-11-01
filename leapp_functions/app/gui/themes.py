@@ -28,9 +28,9 @@ ROLES = frozenset((
     "main_bg",  # The main window background color
     "progress",  # The line of the steps, from the first one to the one on show
     "text_error",  # A problem, the subtitle of the status bar when Next is blocked: red in every LEAPP
-    "text_legend",  # The subtitle of the status bar, the text of a button that cannot be used
+    "text_legend",  # The example text of an empty input, the text of a button or check box that cannot be used
     "text_primary",  # The text of titles (cards too), inputs and buttons, the icon of a step on show or done
-    "text_secondary",  # The label above an input, the icon and title of a step not reached
+    "text_secondary",  # The label above an input, icon and title of a step not reached, subtitle of the status bar
 ))
 
 
