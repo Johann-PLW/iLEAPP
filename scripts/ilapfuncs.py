@@ -1047,7 +1047,14 @@ def get_plist_file_content(file_path):
         with open(file_path, 'rb') as file:
             plist_content = plistlib.load(file)
             if isinstance(plist_content, dict) and plist_content.get('$archiver', '') == 'NSKeyedArchiver':
-                return nska_deserialize.deserialize_plist(file_path)
+                # Decode the bytes from the handle already open. deserialize_plist(file_path)
+                # opened the file a second time and never closed it, which leaked a handle
+                # per keyed archive read (a ResourceWarning under -X dev) and, on Windows,
+                # held the temporary copy of a stream open while the finally below tried to
+                # delete it. _deserialize_nska is also what get_plist_content uses, so the
+                # dependency's console noise is dropped on this path too.
+                file.seek(0)
+                return _deserialize_nska(file.read())
             return plist_content
     except FileNotFoundError:
         logfunc(f"Error: Plist file not found at {file_path}")
@@ -1205,6 +1212,29 @@ def get_sqlite_db_uri_query(path):
                 'with immutable=1, which reads the database file alone.')
         return 'mode=ro&immutable=1'
     return 'mode=ro'
+
+SQLITE_SIDECAR_SUFFIXES = ('-wal', '-shm', '-journal')
+
+
+def is_sqlite_sidecar(path):
+    """True for the -wal, -shm or -journal file SQLite keeps beside a database.
+
+    A path pattern such as '*/Foo.sqlite*' also matches these files. A sidecar is not a
+    database: queried on its own it raises sqlite3.DatabaseError ('file is not a database').
+    open_sqlite_db_readonly reads the -wal and -shm through the database itself, and
+    sqlite_wal.WalStates finds the log at <database>-wal on disk, so neither needs the sidecar
+    in the list an artifact loops over.
+
+    Use it where an artifact picks the files it will open. Leave the 'paths' patterns
+    alone: the seeker stages a sidecar only because the pattern matches it.
+    """
+    return str(path).lower().endswith(SQLITE_SIDECAR_SUFFIXES)
+
+
+def sqlite_databases(files_found):
+    """The found files that are not SQLite sidecars, as strings, in their original order."""
+    return [str(f) for f in files_found if not is_sqlite_sidecar(f)]
+
 
 def open_sqlite_db_readonly(path):
     '''Opens a sqlite db in read-only mode, so original db (and -wal/journal are intact)'''
