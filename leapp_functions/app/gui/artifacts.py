@@ -15,6 +15,8 @@ from leapp_functions.app.gui.custom_widgets import (GAP, SIDE_WIDTH, Card, Field
                                                     OutlineButton, show_example)
 
 SEARCH_EXAMPLE = "Search an artifact or a category"
+SELECT_TEXTS = {False: ("Select all", "Deselect all"), True: ("Select found", "Deselect found")}
+SELECT_WIDTH = max(len(text) for texts in SELECT_TEXTS.values() for text in texts)
 COUNT_WIDTH = 64
 DETAILS = (("module", "Module"), ("name", "Artifact"))
 ROW = "artifact:"
@@ -129,31 +131,40 @@ class CategoryTree(tk.Frame):
         self.on_toggle(category)
 
 
-class SearchBar(tk.Frame):
-    """ Search over categories and artifacts. """
+class SearchLine(tk.Frame):
+    """ The search field, then two buttons that select or unselect every artifact it finds or
+    every artifact while it is empty. """
 
-    def __init__(self, parent, app, background, on_all):
+    def __init__(self, parent, app, variable, on_all):
+        background = app.colors.main_bg
         super().__init__(parent, bg=background)
-        self.found = tk.Label(self, anchor="w", bg=background, fg=app.colors.text_secondary,
-                              font=themes.sans(11))
-        self.found.pack(side="left", fill="x", expand=True)
-        self.buttons = [OutlineButton(self, app, text=text, style="in_card",
+        self.columnconfigure(0, weight=1)
+        field = LabeledEntry(self, app, Field("", variable), background=background)
+        field.grid(row=0, column=0, sticky="ew")
+        show_example(field, app, variable, SEARCH_EXAMPLE)
+        self.entry = field.entry
+        self.buttons = [OutlineButton(self, app, text=text, style="in_card", width=SELECT_WIDTH,
                                       command=lambda select=select: on_all(select))
-                        for text, select in (("All", True), ("None", False))]
-        for button in reversed(self.buttons):
-            button.pack(side="right", padx=(8, 0))
+                        for text, select in zip(SELECT_TEXTS[False], (True, False))]
+        for column, button in enumerate(self.buttons, start=1):
+            button.grid(row=0, column=column, padx=(8, 0))
 
-    def show(self, groups):
-        """ Say how many artifacts and categories were found. """
-        found = sum(len(names) for names in groups.values())
-        if found:
-            artifacts = "artifact" if found == 1 else "artifacts"
-            categories = "category" if len(groups) == 1 else "categories"
-            self.found.configure(text=f"{found} {artifacts} found in {len(groups)} {categories}")
-        else:
-            self.found.configure(text="No artifact found")
-        for button in self.buttons:
-            button.set_enabled(bool(found))
+    def refresh(self, searching, found):
+        """ Name the buttons after what they act on, and let them be used only if the search
+        found something. """
+        for button, text in zip(self.buttons, SELECT_TEXTS[searching]):
+            button.set_text(text)
+            button.set_enabled(found)
+
+
+def found_text(groups):
+    """ How many artifacts and categories a search found. """
+    found = sum(len(names) for names in groups.values())
+    if not found:
+        return "No artifact found"
+    artifacts = "artifact" if found == 1 else "artifacts"
+    categories = "category" if len(groups) == 1 else "categories"
+    return f"{found} {artifacts} found in {len(groups)} {categories}"
 
 
 class ArtifactTree(tk.Frame):
@@ -271,10 +282,8 @@ class ArtifactsScreen(tk.Frame):
         self.rowconfigure(1, weight=1)
 
         self.search = tk.StringVar(value=app.app_state.artifacts.search)
-        field = LabeledEntry(self, app, Field("", self.search), background=colors.main_bg)
-        field.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, GAP))
-        show_example(field, app, self.search, SEARCH_EXAMPLE)
-        self.entry = field.entry
+        self.search_line = SearchLine(self, app, self.search, self.select_found)
+        self.search_line.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, GAP))
 
         categories = Card(self, app, "CATEGORIES")
         categories.grid(row=1, column=0, sticky="nsew")
@@ -284,7 +293,8 @@ class ArtifactsScreen(tk.Frame):
 
         artifacts = Card(self, app, "ARTIFACTS")
         artifacts.grid(row=1, column=1, sticky="nsew", padx=(GAP, 0))
-        self.search_bar = SearchBar(artifacts.body, app, artifacts.background, self.select_found)
+        self.found = tk.Label(artifacts.body, anchor="w", bg=artifacts.background,
+                              fg=colors.text_secondary, font=themes.sans(11))
         self.artifact_list = ArtifactTree(artifacts.body, app, artifacts.background, self.toggled)
         self.artifact_list.pack(fill="both", expand=True)
 
@@ -304,12 +314,13 @@ class ArtifactsScreen(tk.Frame):
         state.artifacts.search = self.search.get()
         self.groups = group_by_category(search(state.artifacts.listed, state.artifacts.search))
         self.category_list.show(self.groups)
+        self.search_line.refresh(self.searching(), bool(self.groups))
         if self.searching():
-            self.search_bar.show(self.groups)
-            self.search_bar.pack(fill="x", pady=(0, 10), before=self.artifact_list)
+            self.found.configure(text=found_text(self.groups))
+            self.found.pack(fill="x", pady=(0, 10), before=self.artifact_list)
             self.artifact_list.show(self.groups, found=True)
         else:
-            self.search_bar.pack_forget()
+            self.found.pack_forget()
             self.category_chosen()
 
     def category_chosen(self):
@@ -329,7 +340,8 @@ class ArtifactsScreen(tk.Frame):
         self.app.app_state.on_change()
 
     def select_found(self, select):
-        """ Select every artifact found, or unselect them all: All and None. """
+        """ Select every artifact found, or unselect them all. Every artifact is found while the
+        search is empty. """
         selected = self.app.app_state.artifacts.selected
         for names in self.groups.values():
             if select:
@@ -342,4 +354,4 @@ class ArtifactsScreen(tk.Frame):
 
     def focus_search(self):
         """ Put the cursor in the search field: Ctrl+F """
-        self.entry.focus_set()
+        self.search_line.entry.focus_set()
