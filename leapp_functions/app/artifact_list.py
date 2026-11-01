@@ -36,6 +36,13 @@ def list_artifacts(loader):
     return sorted(listed, key=lambda artifact: (artifact.category.upper(), artifact.title.upper()))
 
 
+def search(listed, term):
+    """ The artifacts whose category or title holds the term, case insensitive. """
+    term = term.lower()
+    return [artifact for artifact in listed
+            if term in f"{artifact.category} {artifact.title}".lower()]
+
+
 def group_by_category(listed):
     """ Category names in alphabetical order. """
     groups = {}
@@ -60,9 +67,10 @@ def load_artifacts():
     """ Load every artifact module once.
     Returns:
         SimpleNamespace: loader, which the run needs; listed, the artifacts that can be
-        chosen; selected, the names of those selected by default.
+        chosen; selected, the names of those selected by default; search, the text searched.
     """
     loader = plugin_loader.PluginLoader()
     listed = list_artifacts(loader)
     return SimpleNamespace(loader=loader, listed=listed,
-                           selected={artifact.name for artifact in listed if artifact.default})
+                           selected={artifact.name for artifact in listed if artifact.default},
+                           search="")

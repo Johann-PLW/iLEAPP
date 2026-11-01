@@ -12,6 +12,7 @@ from leapp_functions.app.gui import themes
 BORDER = 2
 TOOLTIP_DELAY = 500
 TOOLTIP_WIDTH = 520
+ENTRY_PADX = 12
 ENTRY_PADY = 4
 SIDE_WIDTH = 300
 GAP = 14
@@ -187,7 +188,7 @@ class LabeledEntry(tk.Frame):
         self.entry = tk.Entry(self.box, textvariable=field.variable, font=font, bg=colors.input_bg,
                               fg=colors.text_primary, insertbackground=colors.text_primary, relief="flat",
                               borderwidth=0, highlightthickness=0)
-        self.entry.grid(row=0, column=0, sticky="ew", padx=12, ipady=ENTRY_PADY)
+        self.entry.grid(row=0, column=0, sticky="ew", padx=ENTRY_PADX, ipady=ENTRY_PADY)
         self.entry.bind("<FocusIn>", lambda _event: self.set_border(colors.border))
         self.entry.bind("<FocusOut>", lambda _event: self.set_border(colors.line))
 
@@ -249,9 +250,11 @@ class FileField(tk.Frame):
 
 def show_example(field, app, variable, text):
     """ A placeholder text in a LabeledEntry while it is empty. """
-    example = tk.Label(field.box, text=text, anchor="w", width=1, bg=app.colors.input_bg,
-                       fg=app.colors.text_legend, font=field.entry.cget("font"))
-    example.grid(row=0, column=0, sticky="ew", padx=12)
+    example = tk.Label(field.box, text=text, anchor="w", width=1, bd=0, padx=0,
+                       bg=app.colors.input_bg, fg=app.colors.text_legend,
+                       font=field.entry.cget("font"))
+    caret = int(field.entry.cget("insertwidth"))
+    example.grid(row=0, column=0, sticky="ew", padx=(ENTRY_PADX + caret, ENTRY_PADX))
     example.bind("<Button-1>", lambda _event: field.entry.focus_set())
 
     def refresh(*_args):

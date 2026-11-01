@@ -43,7 +43,7 @@ class AppState:
                                    single_file=tk.BooleanVar(), detected=None, unlock=None,
                                    secrets={field["name"]: tk.StringVar()
                                             for field in (SECRETS.fields if SECRETS else ())})
-        self.artifacts = SimpleNamespace(loader=None, listed=[], selected=set())
+        self.artifacts = SimpleNamespace(loader=None, listed=[], selected=set(), search="")
 
         self.run_status = "idle"  # "idle" until a run starts, then "running", then "finished"
 
