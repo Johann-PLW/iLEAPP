@@ -137,9 +137,9 @@ class AppState:
             return detected.problem
         unlock = self.run.unlock
         if unlock is not None and not unlock.shown.done:
-            return "The source is still being opened: see the Source step."
+            return "The source is still being opened: see DETECTED."
         if unlock is not None and unlock.result is None:
-            return "The source could not be opened: see the Source step."
+            return "The source could not be opened: see DETECTED."
         return ""
 
     def stage(self):
@@ -151,17 +151,14 @@ class AppState:
         index = ORDER.index(self.step) + offset
         return ORDER[index] if 0 <= index < len(ORDER) else None
 
-    def missing_for_run(self):
-        """What a run still needs: an extraction, an output folder and at least one artifact."""
-        missing = self.missing_for_source()
-        if missing:
-            return missing
-        missing = self.missing_for_output() or self.missing_for_secrets()
-        if missing:
-            return missing
-        if not self.artifacts.selected:
+    def missing_for(self, step):
+        """ What the user must still do before moving to a step. """
+        if step not in ("artifacts", "review", "run"):
+            return ""
+        missing = self.missing_for_source() or self.missing_for_secrets() or self.missing_for_output()
+        if not missing and step != "artifacts" and not self.artifacts.selected:
             return "No artifact selected."
-        return ""
+        return missing
 
     def missing_for_output(self):
         """ Why the report cannot be written. An empty folder name stands for the automatic one. """
@@ -184,22 +181,16 @@ class AppState:
                 return f"The {name} file no longer exists."
         return ""
 
-    def ready_to_run(self):
-        """ Whether a run has everything it needs: an extraction, an output folder and at least
-        one artifact. """
-        return not self.missing_for_run()
-
     def can_go(self, step):
         """
         Whether the user may move to a step, given by its key.
-        Case, Source and Artifacts are always open, Artifacts too without an extraction so that the
-        artifacts can be looked at and a profile loaded first. Run needs everything a run needs,
-        and Results a run that has taken place. While a run is on, nothing else can be reached.
+        Case and Source are always open. Artifacts and Run need what missing_for() lists, and
+        Results a run that has taken place. While a run is on, nothing else can be reached.
         """
         if self.run_status == "running":
             return step == "run"
-        if step in ("review", "run"):
-            return self.ready_to_run()
+        if step in ("artifacts", "review", "run"):
+            return not self.missing_for(step)
         if step == "results":
             return self.run_status == "finished"
         return True
@@ -207,11 +198,10 @@ class AppState:
     def completed(self):
         """ The steps done, shown with a tick.
         The case data is optional: the step is done once the user has moved on from it.
-        The source is done once it can be read, after the questions asked to open it.
         """
         done = set()
         if "case" in self.left or not self.case_is_empty():
             done.add("case")
-        if not self.missing_for_source():
+        if not self.missing_for("artifacts"):
             done.add("source")
         return done

@@ -69,14 +69,12 @@ class StatusBar(tk.Frame):
             if left_out:
                 subtitle += f" · {left_out} slow or large ones are unselected by default"
 
-        # Next is blocked when the screen after this one cannot be reached. Of the screens
-        # that move on to another one, only the review can be unreachable.
         target = state.neighbour(1)
-        blocked = state.step == "artifacts" and not state.can_go(target)
+        blocked = state.step in ("source", "artifacts") and not state.can_go(target)
 
         self.title_label.configure(text=title)
         self.subtitle_label.configure(
-            text=state.missing_for_run() if blocked else subtitle,
+            text=state.missing_for(target) if blocked else subtitle,
             fg=colors.text_error if blocked else colors.text_secondary)
 
         # Only one of the two is shown. grid_remove() hides a widget and keeps where it was
