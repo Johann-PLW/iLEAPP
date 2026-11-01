@@ -116,17 +116,18 @@ def load_icon(name, size, color, margin=0, tick=None):
 
 
 @cache
-def check_box_image(size, colors, gap):
+def check_box_image(size, colors, gap, mark="check"):
     """ A square box with a 1 pixel border, with a tick in it when a tick colour is given, as a
     Pillow image followed by a transparent gap before the text.
     Args:
         size (int): Side of the box in pixels
         colors (tuple): Hex colours of the inside, of the border and of the tick (None: no tick)
         gap (int): Transparent pixels on the right of the box
+        mark (str): The Tabler icon drawn as the tick: "minus" for a box partly ticked
     """
     fill, border, tick = colors
     image = Image.new("RGBA", (size + gap, size), (0, 0, 0, 0))
     ImageDraw.Draw(image).rectangle([0, 0, size - 1, size - 1], fill=fill, outline=border)
     if tick is not None:
-        image.alpha_composite(icon_image("check", size, tick))
+        image.alpha_composite(icon_image(mark, size, tick))
     return image

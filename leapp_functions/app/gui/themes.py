@@ -16,6 +16,7 @@ HEX_COLOUR = re.compile(r"#[0-9A-Fa-f]{6}")
 CHECK_BOX = 16
 CHECK_BOX_GAP = 8
 CHECK_BOX_PICTURES = {}
+LIST_ROW = 22
 ROLES = frozenset((
     "border",  # A card's border, an input's border with the focus, the line above the status bar
     "button_border",  # The border of a quiet button and of a button in a card
@@ -118,15 +119,39 @@ def apply_styles(style, colors):
                   bordercolor=states, lightcolor=states, darkcolor=states, focuscolor=states)
     style.configure("Field.TButton", padding=(18, 3, 18, 4))
     style_check_box(style, colors)
+    style_lists(style, colors)
+
+
+def style_lists(style, colors):
+    """ A list in a card, and its scroll bar. """
+    style.layout("Card.Treeview", [("Treeview.treearea", {"sticky": "nswe"})])
+    style.configure("Card.Treeview", background=colors.card_bg, fieldbackground=colors.card_bg,
+                    foreground=colors.text_primary, font=sans(13), rowheight=LIST_ROW,
+                    borderwidth=0)
+    style.map("Card.Treeview", background=[("selected", colors.line)],
+              foreground=[("selected", colors.text_primary)])
+    style.layout("Card.Treeview.Item", [("Treeitem.padding", {"sticky": "nswe", "children": [
+        ("Treeitem.image", {"side": "left", "sticky": ""}),
+        ("Treeitem.text", {"sticky": "nswe"})]})])
+
+    style.configure("Card.Vertical.TScrollbar", background=colors.line, troughcolor=colors.card_bg,
+                    bordercolor=colors.card_bg, lightcolor=colors.line, darkcolor=colors.line,
+                    arrowcolor=colors.text_secondary, gripcount=0, arrowsize=12)
+    style.map("Card.Vertical.TScrollbar", background=[("active", colors.border)],
+              lightcolor=[("active", colors.border)], darkcolor=[("active", colors.border)])
+
+
+def check_box_colors(colors):
+    """ The colours of a check box in each state. """
+    return {"off": (colors.input_bg, colors.border, None),
+            "on": (colors.input_bg, colors.border, colors.text_primary),
+            "disabled": (colors.card_bg, colors.line, None)}
 
 
 def style_check_box(style, colors):
     """ A check box in a card. """
     pictures = {state: images.check_box_image(CHECK_BOX, box_colors, CHECK_BOX_GAP)
-                for state, box_colors in (
-                    ("off", (colors.input_bg, colors.border, None)),
-                    ("on", (colors.input_bg, colors.border, colors.text_primary)),
-                    ("disabled", (colors.card_bg, colors.line, None)))}
+                for state, box_colors in check_box_colors(colors).items()}
     if "Tick.indicator" in style.element_names():
         for state, picture in pictures.items():
             CHECK_BOX_PICTURES[state].paste(picture)

@@ -36,6 +36,26 @@ def list_artifacts(loader):
     return sorted(listed, key=lambda artifact: (artifact.category.upper(), artifact.title.upper()))
 
 
+def group_by_category(listed):
+    """ Category names in alphabetical order. """
+    groups = {}
+    for artifact in listed:
+        groups.setdefault(artifact.category, []).append(artifact.name)
+    return groups
+
+
+def toggle(names, selected):
+    """ Select every artifact named, or unselect them all when they are all selected already.
+    Args:
+        names (list of str): the artifacts the user acts on.
+        selected (set of str): the names of the artifacts selected, changed in place.
+    """
+    if selected.issuperset(names):
+        selected.difference_update(names)
+    else:
+        selected.update(names)
+
+
 def load_artifacts():
     """ Load every artifact module once.
     Returns:
