@@ -8,6 +8,7 @@ from tkinter import filedialog, ttk
 
 from leapp_functions import leapp
 from leapp_functions.app import history, input_type
+from leapp_functions.app.disk import FILE, SILENT, path_status
 from leapp_functions.app.gui import themes
 from leapp_functions.app.gui.app_state import SECRETS
 from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, Field, FileField,
@@ -322,7 +323,9 @@ class ChecksCard(tk.Frame):
             path = variable.get()
             if not path:
                 lines.append(("optional", f"{name.capitalize()}: optional, none chosen."))
-            elif not os.path.isfile(path):
+            elif path_status(path) == SILENT:
+                lines.append(("problem", f"{name.capitalize()}: the file does not answer."))
+            elif path_status(path) != FILE:
                 lines.append(("problem", f"{name.capitalize()}: the file no longer exists."))
             else:
                 lines.append(("ok", f"{name.capitalize()}: {os.path.basename(path)}"))
@@ -355,19 +358,22 @@ class DetectedCard(tk.Frame):
                   for variable in (run.source, run.single_file)]
         self.bind("<Destroy>", lambda _event: self.stop(traces))
         self.refresh()
-        self.present = self.source_present()
+        self.seen = self.look()
         self.watching = self.after(WATCH_DELAY, self.watch)
 
-    def source_present(self):
-        """ Is every path of the source on the disk. """
-        return all(os.path.exists(path) for path in self.app.app_state.source_paths())
+    def look(self):
+        """ What the disk says about the source, and what the screen lacks for a run. """
+        state = self.app.app_state
+        return ([path_status(path) for path in state.source_paths()], state.missing_for("artifacts"))
 
     def watch(self):
-        """ Look at the source again when it goes or comes back, as a drive unplugged does. """
-        present = self.source_present()
-        if present != self.present:
-            self.present = present
+        """ Show again what has changed on the disk, as when a drive goes or comes back, and
+        ask again for a source that has not answered yet. """
+        state = self.app.app_state
+        if self.look() != self.seen or state.run.detected == input_type.NO_ANSWER:
             self.refresh()
+            state.on_change()
+            self.seen = self.look()
         self.watching = self.after(WATCH_DELAY, self.watch)
 
     def schedule(self):

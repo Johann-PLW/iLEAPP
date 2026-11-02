@@ -11,7 +11,8 @@ from types import SimpleNamespace
 
 from leapp_functions import leapp
 from leapp_functions.app import input_type
-from leapp_functions.app.output import resolve_output_folder_name, validate_output_folder_available
+from leapp_functions.app.disk import FILE, FOLDER, MISSING, SILENT, ask, path_status
+from leapp_functions.app.platform import validate_filename
 from leapp_functions.app.unlock import UNLOCKERS, Unlock
 from scripts.filetype import guess_mime
 from scripts.raw_image import selected_paths, selection_text
@@ -20,10 +21,21 @@ ORDER = ("case", "source", "artifacts", "review", "run", "results")
 
 SECRETS = getattr(leapp, "secrets", None)
 STAGE_OF = {"review": "run"}
+DETECT_WAIT = 0.3
+NO_ANSWER = "The {} does not answer: its drive may be disconnected."
 
 CASE_KEYS = {"Case Number": "number", "Agency": "agency", "Agency Logo Path": "logo_path",
              "Agency Logo mimetype": "logo_mimetype", "Agency Logo base64": "logo_base64",
              "Examiner": "examiner", "Notes": "notes"}
+
+
+def unlock_problem(unlock):
+    """ Why the sequence that opens the source leaves it unread. """
+    if unlock is None:
+        return ""
+    if not unlock.shown.done:
+        return "The source is still being opened: see DETECTED."
+    return "The source could not be opened: see DETECTED." if unlock.result is None else ""
 
 
 class AppState:
@@ -92,7 +104,7 @@ class AppState:
     def is_one_file(self):
         """ Whether the source is one file: only then can it be read as a single file. """
         paths = self.source_paths()
-        return len(paths) == 1 and os.path.isfile(paths[0])
+        return len(paths) == 1 and path_status(paths[0]) == FILE
 
     def source_paths(self):
         """ The input the source field stands for. """
@@ -101,7 +113,12 @@ class AppState:
 
     def detect_source(self):
         """ Look at the source. """
-        detected = input_type.detect(self.source_paths(), single_file=self.run.single_file.get())
+        paths, single_file = self.source_paths(), self.run.single_file.get()
+        detected = ask(("detect", tuple(paths), single_file),
+                       lambda: input_type.detect(paths, single_file=single_file),
+                       wait=DETECT_WAIT, fresh=0)
+        if detected == SILENT:
+            detected = input_type.NO_ANSWER
         if detected != self.run.detected:
             self.run.detected = detected
             self.start_unlock()
@@ -136,14 +153,12 @@ class AppState:
             return "Select an extraction first: nothing can be parsed without one."
         if not detected.kind:
             return detected.problem
-        if not all(os.path.exists(path) for path in self.source_paths()):
+        statuses = [path_status(path) for path in self.source_paths()]
+        if SILENT in statuses:
+            return NO_ANSWER.format("extraction")
+        if MISSING in statuses:
             return "The extraction no longer exists."
-        unlock = self.run.unlock
-        if unlock is not None and not unlock.shown.done:
-            return "The source is still being opened: see DETECTED."
-        if unlock is not None and unlock.result is None:
-            return "The source could not be opened: see DETECTED."
-        return ""
+        return unlock_problem(self.run.unlock)
 
     def stage(self):
         """The step of the five under the header that the screen on show belongs to."""
@@ -175,19 +190,26 @@ class AppState:
         folder = self.run.output.get().strip()
         if not folder:
             return "Choose an output folder."
-        if not os.path.isdir(folder):
+        status = path_status(folder)
+        if status == SILENT:
+            return NO_ANSWER.format("output folder")
+        if status != FOLDER:
             return "This output folder does not exist."
         name = self.run.folder_name.get().strip()
-        _valid, error = validate_output_folder_available(folder, name)
-        if error and os.path.exists(os.path.join(folder, resolve_output_folder_name(name))):
+        if not name:
+            return ""
+        _valid, error = validate_filename(name)
+        if not error and path_status(os.path.join(folder, name)) != MISSING:
             return f"A folder named {name} is already in the output folder."
         return error or ""
 
     def missing_for_secrets(self):
         """ A file chosen to decrypt apps that is no longer there. """
         for name, variable in self.run.secrets.items():
-            path = variable.get()
-            if path and not os.path.isfile(path):
+            status = path_status(variable.get()) if variable.get() else FILE
+            if status == SILENT:
+                return NO_ANSWER.format(f"{name} file")
+            if status != FILE:
                 return f"The {name} file no longer exists."
         return ""
 
