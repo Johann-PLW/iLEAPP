@@ -3,18 +3,25 @@ The Artifacts screen: what will be parsed.
 """
 
 import tkinter as tk
-from tkinter import ttk
+from pathlib import Path
+from tkinter import filedialog, messagebox, ttk
+from types import SimpleNamespace
 
 from PIL import ImageTk
 
-from leapp_functions.app.artifact_list import by_title, group_by_category, search, toggle
+from leapp_functions import leapp
+from leapp_functions.app.artifact_list import (by_title, group_by_category, load_profile,
+                                               profile_artifacts, profile_for_report, search,
+                                               toggle, write_profile)
 from leapp_functions.app.gui import images, themes
-from leapp_functions.app.gui.custom_widgets import (GAP, SIDE_WIDTH, Card, Field, LabeledEntry,
-                                                    OutlineButton, Tooltip, show_example)
+from leapp_functions.app.gui.custom_widgets import (GAP, SIDE_WIDTH, Caption, Card, Field,
+                                                    LabeledEntry, OutlineButton, show_example)
 
 SEARCH_EXAMPLE = "Search an artifact or a category"
-VIEWS = (("all", "All"), ("category", "Category"), ("profiles", "Profiles"))
-NOT_YET = {"profiles": "Not available yet."}
+VIEWS = (("all", "All"), ("category", "Category"))
+SHOW_PROFILE = "Show loaded profile"
+PROFILE_DIFFERS = "The selection differs from this profile: the report will not name it."
+PROFILE_FILES = ((f"{leapp.name} Profile", f"*{leapp.profile_extension}"),)
 SELECT_TEXTS = {False: ("Select all", "Deselect all"), True: ("Select found", "Deselect found")}
 SELECT_WIDTH = max(len(text) for texts in SELECT_TEXTS.values() for text in texts)
 COUNT_WIDTH = 64
@@ -132,9 +139,9 @@ class CategoryTree(tk.Frame):
 
 
 class SearchLine(tk.Frame):
-    """ The search field and a button for each way to view the list. """
+    """ The search field, a button for each way to view the list, and a profile button. """
 
-    def __init__(self, parent, app, variable, on_view):
+    def __init__(self, parent, app, variable, commands):
         background = app.colors.main_bg
         super().__init__(parent, bg=background)
         self.variable = variable
@@ -146,12 +153,31 @@ class SearchLine(tk.Frame):
         self.views = {}
         for column, (view, text) in enumerate(VIEWS, start=1):
             button = OutlineButton(self, app, text=text, style="in_card", width=-len(text),
-                                   command=lambda view=view: on_view(view))
+                                   command=lambda view=view: commands.view(view))
             button.grid(row=0, column=column, padx=(8, 0))
-            if view in NOT_YET:
-                button.set_enabled(False)
-                Tooltip((button.button,), app, lambda view=view: NOT_YET[view])
             self.views[view] = button
+        text = "Profile ▾"
+        self.profile_button = OutlineButton(self, app, text=text, style="in_card", width=-len(text),
+                                            command=self.show_profile_menu)
+        self.profile_button.grid(row=0, column=len(VIEWS) + 1, padx=(8, 0))
+        self.views["profile"] = self.profile_button
+        self.profile_menu = tk.Menu(self, tearoff=0)
+        self.profile_menu.add_command(label="Load profile…", command=commands.load)
+        self.profile_menu.add_command(label="Save profile…", command=commands.save)
+        self.profile_menu.add_command(label=SHOW_PROFILE,
+                                      command=lambda: commands.view("profile"))
+        self.state = app.app_state
+
+    def show_profile_menu(self):
+        """ Open the menu under its button. A profile can be shown once one is loaded. """
+        self.profile_menu.entryconfigure(
+            SHOW_PROFILE, state="normal" if self.state.artifacts.profile else "disabled")
+        button = self.profile_button
+        try:
+            self.profile_menu.tk_popup(button.winfo_rootx(),
+                                       button.winfo_rooty() + button.winfo_height())
+        finally:
+            self.profile_menu.grab_release()
 
     def show_view(self, chosen):
         """ Show which view is chosen. """
@@ -190,6 +216,62 @@ class ListHeading(tk.Frame):
         for button, text in zip(self.buttons, SELECT_TEXTS[searching]):
             button.set_text(text)
             button.set_enabled(listed)
+
+
+class ProfilePanel(tk.Frame):
+    """ The path of the profile loaded, and the names it holds that match no artifact. """
+
+    def __init__(self, parent, app, background):
+        colors = app.colors
+        super().__init__(parent, bg=background)
+        self.path = Caption(self, app, "", background)
+        self.path.configure(fg=colors.text_primary, font=themes.mono(12))
+        self.path.pack(fill="x", pady=(4, 0))
+        self.differs = Caption(self, app, PROFILE_DIFFERS, background)
+        self.problem = Caption(self, app, "", background)
+        self.problem.configure(fg=colors.text_error)
+
+        self.names = tk.Frame(self, bg=background)
+        self.names.rowconfigure(0, weight=1)
+        self.names.columnconfigure(0, weight=1)
+        self.text = tk.Text(self.names, width=1, height=1, wrap="char", state="disabled", bd=0,
+                            highlightthickness=0, padx=3, pady=0, spacing3=4,
+                            bg=background, fg=colors.text_primary, font=themes.mono(11),
+                            selectbackground=colors.line, selectforeground=colors.text_primary)
+        self.text.tag_configure("name", lmargin2=12)
+        self.text.grid(row=0, column=0, sticky="nsew")
+        scrollbar = ttk.Scrollbar(self.names, orient="vertical", command=self.text.yview,
+                                  style="Card.Vertical.TScrollbar")
+        scrollbar.grid(row=0, column=1, sticky="ns", padx=(6, 0))
+        self.text.configure(yscrollcommand=scrollbar.set)
+
+    def show(self, profile):
+        """ Show the profile loaded. """
+        self.path.configure(text=profile.path)
+        self.problem.pack_forget()
+        self.names.pack_forget()
+        if profile.unknown:
+            self.problem.configure(text=unknown_text(profile.unknown))
+            self.problem.pack(fill="x", pady=(14, 8))
+            self.names.pack(fill="both", expand=True)
+        self.text.configure(state="normal")
+        self.text.delete("1.0", "end")
+        self.text.insert("1.0", "\n".join(profile.unknown), "name")
+        self.text.configure(state="disabled")
+
+    def show_differs(self, differs):
+        """ Indicate whether the selection is no longer what the profile selects. """
+        if differs:
+            self.differs.pack(fill="x", pady=(8, 0), after=self.path)
+        else:
+            self.differs.pack_forget()
+
+
+def unknown_text(unknown):
+    """ Artifacts that do not exist. """
+    if len(unknown) == 1:
+        return "1 artifact of this profile is not in this version and will not run."
+    return f"{len(unknown)} artifacts of this profile are not in this version and will not run."
 
 
 def found_text(groups, with_categories):
@@ -359,7 +441,8 @@ class ArtifactsScreen(tk.Frame):
         self.rowconfigure(1, weight=1)
 
         search_text = tk.StringVar(value=app.app_state.artifacts.search)
-        self.search_line = SearchLine(self, app, search_text, self.view_chosen)
+        self.search_line = SearchLine(self, app, search_text, SimpleNamespace(
+            view=self.view_chosen, load=self.choose_profile, save=self.save_profile))
         self.search_line.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, GAP))
 
         categories = Card(self, app, "BY CATEGORY")
@@ -374,10 +457,16 @@ class ArtifactsScreen(tk.Frame):
         summary_heading.stack_buttons()
         summary_heading.pack(fill="x")
 
+        profile = Card(self, app, "PROFILE")
+        profile.grid(row=1, column=0, sticky="nsew")
+        self.profile_panel = ProfilePanel(profile.body, app, profile.background)
+        self.profile_panel.pack(fill="both", expand=True)
+
         artifacts = Card(self, app)
         artifacts.grid(row=1, column=1, sticky="nsew", padx=(GAP, 0))
         list_heading = ListHeading(artifacts.body, app, artifacts.background, self.select_listed)
-        self.sides = {True: (summary, summary_heading), False: (categories, list_heading)}
+        self.sides = {"all": (summary, summary_heading), "category": (categories, list_heading),
+                      "profile": (profile, list_heading)}
         self.artifact_list = ArtifactTree(artifacts.body, app, artifacts.background, self.toggled)
         self.artifact_list.pack(fill="both", expand=True)
 
@@ -395,13 +484,13 @@ class ArtifactsScreen(tk.Frame):
         """ Whether a search is on. """
         return bool(self.search_line.variable.get())
 
-    def viewing_all(self):
-        """ Is the view "All" chosen. """
-        return self.app.app_state.artifacts.view == "all"
+    def viewing(self, view):
+        """ Is this view chosen. """
+        return self.app.app_state.artifacts.view == view
 
     def listing_all(self):
         """ Does the list hold everything found rather than one category. """
-        return self.searching() or self.viewing_all()
+        return self.searching() or not self.viewing("category")
 
     def listed_groups(self):
         """ The names of the artifacts listed, by category. """
@@ -412,17 +501,25 @@ class ArtifactsScreen(tk.Frame):
 
     def refresh_heading(self):
         """ What is listed and how many of them are selected. """
+        artifacts = self.app.app_state.artifacts
         groups = self.listed_groups()
         names = [name for group in groups.values() for name in group]
         if self.searching():
             title = "Search results"
-            detail = found_text(self.groups, with_categories=not self.viewing_all())
+            detail = found_text(self.groups, with_categories=self.viewing("category"))
         else:
-            chosen = len(self.app.app_state.artifacts.selected.intersection(names))
-            title = "All artifacts" if self.listing_all() else next(iter(groups), "")
+            chosen = len(artifacts.selected.intersection(names))
             detail = f"{chosen} of {len(names)} selected"
-        _card, heading = self.sides[self.viewing_all()]
+            if self.viewing("all"):
+                title = "All artifacts"
+            elif self.viewing("category"):
+                title = next(iter(groups), "")
+            else:
+                title = Path(artifacts.profile.path).name
+        _card, heading = self.sides[artifacts.view]
         heading.refresh(title, detail, self.searching(), bool(names))
+        if self.viewing("profile"):
+            self.profile_panel.show_differs(profile_for_report(artifacts) is None)
 
     def view_chosen(self, view):
         """ A way to view the chosen list chosen. """
@@ -434,11 +531,16 @@ class ArtifactsScreen(tk.Frame):
     def place_cards(self):
         """ Show the card on the left of the view chosen, and the heading above the artifacts
         unless that card holds it. """
-        viewing_all = self.viewing_all()
-        self.sides[viewing_all][0].grid()
-        self.sides[not viewing_all][0].grid_remove()
+        viewing_all = self.viewing("all")
+        if self.viewing("profile"):
+            self.profile_panel.show(self.app.app_state.artifacts.profile)
+        for view, (card, _heading) in self.sides.items():
+            if self.viewing(view):
+                card.grid()
+            else:
+                card.grid_remove()
         self.artifact_list.show_details_below(not viewing_all)
-        list_heading = self.sides[False][1]
+        list_heading = self.sides["category"][1]
         if viewing_all:
             list_heading.pack_forget()
         else:
@@ -448,10 +550,12 @@ class ArtifactsScreen(tk.Frame):
         """ The text searched or the view changed. """
         state = self.app.app_state
         state.artifacts.search = self.search_line.variable.get()
-        found = search(state.artifacts.listed, state.artifacts.search)
+        listed = (profile_artifacts(state.artifacts) if self.viewing("profile")
+                  else state.artifacts.listed)
+        found = search(listed, state.artifacts.search)
         self.groups = group_by_category(found)
         self.category_list.show(self.groups)
-        if self.viewing_all():
+        if not self.viewing("category"):
             self.artifact_list.show({"": by_title(found)}, headers=False)
             self.refresh_heading()
         elif self.searching():
@@ -462,8 +566,8 @@ class ArtifactsScreen(tk.Frame):
 
     def category_chosen(self):
         """ Chosen category: show its artifacts, or scroll to them if the list holds them
-        with others. The view "All" shows no categories to choose from. """
-        if self.viewing_all():
+        with others. Only the view "Category" shows categories to choose from. """
+        if not self.viewing("category"):
             return
         category = self.category_list.chosen()
         if category is not None:
@@ -488,10 +592,48 @@ class ArtifactsScreen(tk.Frame):
                 selected.update(names)
             else:
                 selected.difference_update(names)
+        self.selection_changed()
+
+    def selection_changed(self):
+        """ Show the artifacts selected everywhere on the screen and in the status bar. """
         self.category_list.refresh_rows()
         self.artifact_list.refresh_rows()
         self.refresh_heading()
         self.app.app_state.on_change()
+
+    def choose_profile(self):
+        """ Select the artifacts of a profile file, and show them in the view "Profile". """
+        window = self.winfo_toplevel()
+        path = filedialog.askopenfilename(parent=window, title="Load a profile",
+                                          filetypes=PROFILE_FILES)
+        if not path:
+            return
+        artifacts = self.app.app_state.artifacts
+        try:
+            load_profile(path, artifacts)
+        except ValueError as error:
+            messagebox.showerror("Load a profile", str(error), parent=window)
+            return
+        self.search_line.variable.set("")
+        self.view_chosen("profile")
+        self.app.app_state.on_change()
+        self.update_idletasks()
+        if artifacts.profile.unknown:
+            messagebox.showwarning("Profile loaded", unknown_text(artifacts.profile.unknown)
+                                   + "\n\nThe PROFILE card lists them.", parent=window)
+
+    def save_profile(self):
+        """ Write the artifacts selected to a profile file. """
+        window = self.winfo_toplevel()
+        path = filedialog.asksaveasfilename(parent=window, title="Save a profile",
+                                            filetypes=PROFILE_FILES,
+                                            defaultextension=leapp.profile_extension)
+        if not path:
+            return
+        if write_profile(path, self.app.app_state.artifacts):
+            messagebox.showinfo("Save a profile", f"Profile saved: {path}", parent=window)
+        else:
+            messagebox.showerror("Save a profile", f"Unable to write {path}.", parent=window)
 
     def focus_search(self):
         """ Put the cursor in the search field: Ctrl+F """
