@@ -10,12 +10,13 @@ from tkinter import messagebox, ttk
 
 from leapp_functions import leapp
 from leapp_functions.app import artifact_list
-from leapp_functions.app.gui import images, themes
+from leapp_functions.app.gui import images, themes, window_area
 from leapp_functions.app.gui.app_state import AppState
 from leapp_functions.app.gui.header import Header
 from leapp_functions.app.gui.steps import STAGES, Steps
 from leapp_functions.app.gui.artifacts import ArtifactsScreen
 from leapp_functions.app.gui.case import CaseScreen
+from leapp_functions.app.gui.custom_widgets import ScrollArea
 from leapp_functions.app.gui.review import ReviewScreen
 from leapp_functions.app.gui.source import SourceScreen
 from leapp_functions.app.gui.status_bar import StatusBar
@@ -52,7 +53,8 @@ class MainWindow(tk.Tk):
         self.title(f"{leapp.name} version {leapp.version}")
         self.icon = images.load("icon.png")
         self.iconphoto(True, self.icon)
-        self.minsize(*MIN_SIZE)
+        self.screen_area = window_area.measure(self)
+        self.minsize(MIN_SIZE[0], min(MIN_SIZE[1], self.screen_area[3]))
 
         self.app_state = AppState(self.refresh_steps)
         self.app_state.artifacts = artifact_list.load_artifacts()
@@ -70,9 +72,14 @@ class MainWindow(tk.Tk):
         self.bind("<Control-i>", lambda _event: self.focus_field("focus_input"))
         self.bind("<Control-o>", lambda _event: self.focus_field("focus_output"))
         self.bind("<Control-f>", lambda _event: self.focus_field("focus_search"))
+        for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+            self.bind(sequence, self.on_wheel)
+        self.bind("<FocusIn>", self.on_focus)
+        try:
+            self.bind("<TouchpadScroll>", self.on_touchpad)
+        except tk.TclError:
+            pass
 
-        self.header = None
-        self.body_frame = None
         self.widgets = {}
         self.unlock_watch = None
 
@@ -83,12 +90,25 @@ class MainWindow(tk.Tk):
             # the window has to be on screen first
             self.after(300, self.redraw)
 
+    def on_wheel(self, event):
+        """ The mouse wheel, anywhere in the window. """
+        self.widgets["scroll"].wheel(event)
+
+    def on_touchpad(self, event):
+        """ The touchpad, anywhere in the window. """
+        self.widgets["scroll"].touchpad(event)
+
+    def on_focus(self, event):
+        """ A widget has got the focus. """
+        self.widgets["scroll"].reveal(event)
+
     def fix_size(self):
         """ Give the window the size its first screen asks for """
         self.update_idletasks()
         width = max(self.winfo_reqwidth(), MIN_SIZE[0])
         height = max(self.winfo_reqheight(), MIN_SIZE[1])
-        self.geometry(f"{width}x{height}")
+        window_area.place(self, self.screen_area, min(width, self.screen_area[2]),
+                          min(height, self.screen_area[3]))
 
     def redraw(self):
         """ On macOS, a window opened from a terminal stays empty until it is clicked:
@@ -117,9 +137,9 @@ class MainWindow(tk.Tk):
 
     def build(self):
         """ Build or replace every widget using the current palette. """
-        for widget in (self.header, self.body_frame):
-            if widget is not None:
-                widget.destroy()
+        for name in ("header", "body"):
+            if name in self.widgets:
+                self.widgets[name].destroy()
         self.configure(bg=self.colors.main_bg)
         themes.apply_styles(ttk.Style(self), self.colors)
         if sys.platform == "darwin":
@@ -129,20 +149,23 @@ class MainWindow(tk.Tk):
             except tk.TclError:
                 pass  # Tk before 8.6.10 has no such setting
 
-        self.header = Header(self, self)
-        self.header.pack(fill="x")
+        self.widgets["header"] = Header(self, self)
+        self.widgets["header"].pack(fill="x")
 
-        self.body_frame = tk.Frame(self, bg=self.colors.main_bg)
-        self.body_frame.pack(fill="both", expand=True, padx=16, pady=(16, 8))
-        self.body_frame.columnconfigure(0, weight=1)
-        self.body_frame.rowconfigure(1, weight=1)
+        body = self.widgets["body"] = tk.Frame(self, bg=self.colors.main_bg)
+        body.pack(fill="both", expand=True, padx=16, pady=(16, 8))
+        body.columnconfigure(0, weight=1)
+        body.rowconfigure(1, weight=1)
 
-        self.widgets["steps"] = Steps(self.body_frame, self)
+        self.widgets["steps"] = Steps(body, self)
         self.widgets["steps"].grid(row=0, column=0, sticky="ew", pady=(0, 24))
+
+        self.widgets["scroll"] = ScrollArea(body, self, self.fit_screen)
+        self.widgets["scroll"].grid(row=1, column=0, sticky="nsew")
 
         self.show_screen()
 
-        self.widgets["status_bar"] = StatusBar(self.body_frame, self)
+        self.widgets["status_bar"] = StatusBar(body, self)
         self.widgets["status_bar"].grid(row=2, column=0, sticky="ew", pady=(16, 8))
 
     def show_screen(self):
@@ -151,19 +174,23 @@ class MainWindow(tk.Tk):
         if old is not None:
             old.destroy()
         step = self.app_state.step
-        screen = SCREENS.get(step, PlaceholderScreen)(self.body_frame, self)
-        screen.grid(row=1, column=0, sticky='nsew')
+        screen = SCREENS.get(step, PlaceholderScreen)(self.widgets["scroll"].content, self)
         self.widgets["screen"] = screen
+        self.widgets["scroll"].show(screen)
         self.fit_screen()
 
     def fit_screen(self):
         """ Make the window bigger when the screen on show needs more room than it has, within the
-        display. It never gets smaller: a size the user gave it is kept when it is enough. """
+        display: what still does not fit scrolls. It never gets smaller: a size the user gave it
+        is kept when it is enough. It moves if it would leave the display. """
         self.update_idletasks()
-        width = min(max(self.winfo_width(), self.winfo_reqwidth()), self.winfo_screenwidth())
-        height = min(max(self.winfo_height(), self.winfo_reqheight()), self.winfo_screenheight())
-        if (width, height) != (self.winfo_width(), self.winfo_height()):
-            self.geometry(f"{width}x{height}")
+        _left, _top, room_width, room_height = self.screen_area
+        width, height = self.winfo_width(), self.winfo_height()
+        if self.winfo_reqwidth() > width:
+            width = max(width, min(self.winfo_reqwidth(), room_width))
+        if self.winfo_reqheight() > height:
+            height = max(height, min(self.winfo_reqheight(), room_height))
+        window_area.place(self, self.screen_area, width, height)
 
     def go(self, step):
         """ Navigate to a step when the current application state allows it. """

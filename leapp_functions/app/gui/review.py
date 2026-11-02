@@ -95,7 +95,6 @@ class ReviewScreen(tk.Frame):
         self.app = app
         self.problem = app.app_state.missing_for("run")
         main, side = two_columns(self, app)
-        main.bind("<Configure>", lambda _event: app.fit_screen())
         self.build_summary(main)
         self.build_options(main)
         self.notices_card = Card(side, app, "BEFORE YOU RUN", accent=True)

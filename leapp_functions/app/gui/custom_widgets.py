@@ -17,6 +17,8 @@ ENTRY_PADY = 4
 SIDE_WIDTH = 300
 GAP = 14
 MARK_SIZE = 16
+WHEEL_STEP = 24
+WHEEL_NOTCH = 1 if sys.platform == "darwin" and tk.TkVersion < 8.7 else 120
 MARKS = {"ok": ("circle-check", "text_primary"), "todo": ("circle", "text_primary"),
          "attention": ("alert-triangle", "text_primary"), "problem": ("circle-x", "text_error"),
          "optional": ("circle-minus", "text_secondary")}
@@ -163,6 +165,119 @@ def two_columns(screen, app):
     side = tk.Frame(screen, bg=app.colors.main_bg)
     side.grid(row=0, column=1, sticky="new", padx=(GAP, 0))
     return main, side
+
+
+class ScrollArea(tk.Frame):
+    """ The room for a screen. When it is smaller than what the screen asks, the screen is cut and
+    a scroll bar appears.
+    """
+
+    def __init__(self, parent, app, on_asked):
+        colors = app.colors
+        super().__init__(parent, bg=colors.main_bg)
+        self.on_asked = on_asked
+        self.asked = (0, 0)
+        self.offset = 0
+        self.rowconfigure(0, weight=1)
+        self.columnconfigure(0, weight=1)
+
+        self.view = tk.Frame(self, bg=colors.main_bg)
+        self.view.grid(row=0, column=0, sticky="nsew")
+        self.content = tk.Frame(self.view, bg=colors.main_bg)
+        self.content.rowconfigure(0, weight=1)
+        self.content.columnconfigure(0, weight=1)
+        self.content.place(x=0, y=0, relwidth=1)
+
+        self.bar = ttk.Scrollbar(self, orient="vertical", style="Card.Vertical.TScrollbar",
+                                 command=self.scroll)
+        self.bar.grid(row=0, column=1, sticky="ns", padx=(6, 0))
+        self.bar.grid_remove()
+
+        self.view.bind("<Configure>", self.view_changed)
+        self.content.bind("<Configure>", lambda _event: self.content_changed())
+
+    def show(self, screen):
+        """ Show a screen from its top. """
+        screen.grid(row=0, column=0, sticky="nsew")
+        self.offset = 0
+        self.update_idletasks()
+        self.content_changed()
+
+    def view_changed(self, event):
+        """ The window has changed size. """
+        self.content.rowconfigure(0, minsize=event.height)
+        self.place_content()
+
+    def content_changed(self):
+        """ The screen may ask for another size. """
+        asked = (self.content.winfo_reqwidth(), self.screen_height())
+        if asked != self.asked:
+            self.asked = asked
+            self.view.configure(width=asked[0], height=asked[1])
+            self.on_asked()
+        self.place_content()
+
+    def screen_height(self):
+        """ The height the screen asks for. """
+        return max((child.winfo_reqheight() for child in self.content.winfo_children()), default=0)
+
+    def place_content(self):
+        """ Move the content to the offset, which is kept within what can be scrolled, and show
+        the scroll bar if there is something to scroll. """
+        height, shown = self.screen_height(), self.view.winfo_height()
+        self.offset = max(0, min(self.offset, height - shown))
+        self.content.place_configure(y=-self.offset)
+        if height > shown:
+            self.bar.grid()
+            self.bar.set(self.offset / height, (self.offset + shown) / height)
+        else:
+            self.bar.grid_remove()
+
+    def scroll(self, action, value, unit=None):
+        """ What the scroll bar asks. """
+        if action == "moveto":
+            self.offset = int(float(value) * self.screen_height())
+        else:
+            step = self.view.winfo_height() if unit == "pages" else WHEEL_STEP
+            self.offset += int(value) * step
+        self.place_content()
+
+    def holds(self, widget):
+        """ Is a widget in the screen. """
+        return isinstance(widget, tk.Misc) and str(widget).startswith(f"{self.content}.")
+
+    def scrolls(self, widget):
+        """ Does the screen scroll for a wheel used on this widget. """
+        return self.holds(widget) and widget.winfo_class() not in ("Treeview", "Text")
+
+    def wheel(self, event):
+        """ The mouse wheel. """
+        if self.scrolls(event.widget):
+            if event.num in (4, 5):
+                notches = 1 if event.num == 4 else -1
+            else:
+                notches = event.delta / WHEEL_NOTCH
+            self.offset -= int(notches * WHEEL_STEP)
+            self.place_content()
+
+    def touchpad(self, event):
+        """ Two fingers on a touchpad. """
+        if self.scrolls(event.widget):
+            _across, down = self.tk.splitlist(self.tk.call("tk::PreciseScrollDeltas", event.delta))
+            self.offset -= self.tk.getint(down)
+            self.place_content()
+
+    def reveal(self, event):
+        """ Bring into view the widget that has just got the focus. """
+        if not self.holds(event.widget) or self.screen_height() <= self.view.winfo_height():
+            return
+        top = event.widget.winfo_rooty() - self.content.winfo_rooty()
+        bottom = top + event.widget.winfo_height()
+        if top < self.offset or bottom - top > self.view.winfo_height():
+            self.offset = top
+        elif bottom > self.offset + self.view.winfo_height():
+            self.offset = bottom - self.view.winfo_height()
+        self.place_content()
 
 
 def wrap_to_width(event):
