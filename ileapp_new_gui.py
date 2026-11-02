@@ -16,6 +16,7 @@ from leapp_functions.app.gui.header import Header
 from leapp_functions.app.gui.steps import STAGES, Steps
 from leapp_functions.app.gui.artifacts import ArtifactsScreen
 from leapp_functions.app.gui.case import CaseScreen
+from leapp_functions.app.gui.review import ReviewScreen
 from leapp_functions.app.gui.source import SourceScreen
 from leapp_functions.app.gui.status_bar import StatusBar
 
@@ -38,7 +39,8 @@ class PlaceholderScreen(tk.Frame):
                  fg=app.colors.text_secondary, font=themes.sans(14)).pack(pady=(6, 0))
 
 
-SCREENS = {"case": CaseScreen, "source": SourceScreen, "artifacts": ArtifactsScreen}
+SCREENS = {"case": CaseScreen, "source": SourceScreen, "artifacts": ArtifactsScreen,
+           "review": ReviewScreen}
 
 
 class MainWindow(tk.Tk):

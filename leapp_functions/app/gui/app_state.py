@@ -204,4 +204,6 @@ class AppState:
             done.add("case")
         if not self.missing_for("artifacts"):
             done.add("source")
+        if "artifacts" in self.left and not self.missing_for("review"):
+            done.add("artifacts")
         return done
