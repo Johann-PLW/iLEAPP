@@ -8,11 +8,11 @@ from tkinter import filedialog, ttk
 
 from leapp_functions import leapp
 from leapp_functions.app import history, input_type
-from leapp_functions.app.gui import images, themes
+from leapp_functions.app.gui import themes
 from leapp_functions.app.gui.app_state import SECRETS
 from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, Field, FileField,
                                                     LabeledEntry, OutlineButton, Tooltip,
-                                                    show_example, two_columns)
+                                                    mark_line, show_example, two_columns)
 from leapp_functions.app.output import default_output_folder_name
 from leapp_functions.app.platform import sanitize_file_name
 from scripts.raw_image import (RAW_IMAGE_FILE_PATTERNS, RAW_IMAGE_LABEL, confirm_found_members,
@@ -22,6 +22,7 @@ FILE_TYPES = (("All supported files", "*.tar *.zip *.gz *.xz " + RAW_IMAGE_FILE_
               ("tar file", "*.tar"), ("zip file", "*.zip"), ("gz file", "*.gz"),
               ("tar.xz file", "*.xz"), (RAW_IMAGE_LABEL, RAW_IMAGE_FILE_PATTERNS))
 DETECT_DELAY = 300
+WATCH_DELAY = 1000
 POLL_DELAY = 100
 
 
@@ -285,9 +286,6 @@ class SecretsCard(tk.Frame):
 class ChecksCard(tk.Frame):
     """ What the Source screen still lacks for a run, one line for each card of the left column. """
 
-    MARKS = {"ok": ("circle-check", "text_primary"), "todo": ("circle", "text_primary"),
-             "problem": ("circle-x", "text_error"), "optional": ("circle-minus", "text_secondary")}
-
     def __init__(self, parent, app):
         super().__init__(parent, bg=app.colors.main_bg)
         self.app = app
@@ -309,7 +307,7 @@ class ChecksCard(tk.Frame):
         for child in self.card.body.winfo_children():
             child.destroy()
         for row, (status, text) in enumerate(self.lines()):
-            self.line(row, status, text)
+            mark_line(self.card, self.app, row, status, text)
 
     def lines(self):
         """ (status, text) for each card of the left column, in the same order. """
@@ -335,19 +333,6 @@ class ChecksCard(tk.Frame):
             lines.append(("problem", f"Output: {output}") if output else ("ok", "Output: ready."))
         return lines
 
-    def line(self, row, status, text):
-        """ A mark, then the text in the colour of the mark. """
-        colors = self.app.colors
-        icon, role = self.MARKS[status]
-        color = getattr(colors, role)
-        mark = tk.Label(self.card.body, bg=self.card.background, borderwidth=0)
-        mark.image = images.load_icon(icon, 16, color)
-        mark.configure(image=mark.image)
-        mark.grid(row=row, column=0, sticky="nw", pady=(2 if row else 0, 0))
-        caption = Caption(self.card.body, self.app, text, self.card.background)
-        caption.configure(fg=color)
-        caption.grid(row=row, column=1, sticky="ew", padx=(8, 0), pady=(2 if row else 0, 0))
-
 
 class DetectedCard(tk.Frame):
     """ The card on the right of the Source screen: what the source is, as the run will read it. """
@@ -370,6 +355,20 @@ class DetectedCard(tk.Frame):
                   for variable in (run.source, run.single_file)]
         self.bind("<Destroy>", lambda _event: self.stop(traces))
         self.refresh()
+        self.present = self.source_present()
+        self.watching = self.after(WATCH_DELAY, self.watch)
+
+    def source_present(self):
+        """ Is every path of the source on the disk. """
+        return all(os.path.exists(path) for path in self.app.app_state.source_paths())
+
+    def watch(self):
+        """ Look at the source again when it goes or comes back, as a drive unplugged does. """
+        present = self.source_present()
+        if present != self.present:
+            self.present = present
+            self.refresh()
+        self.watching = self.after(WATCH_DELAY, self.watch)
 
     def schedule(self):
         """ Look at the source a moment after the last change of the field. """
@@ -381,6 +380,7 @@ class DetectedCard(tk.Frame):
         """ The card is destroyed: the source is no longer watched for it. """
         for variable, trace in traces:
             variable.trace_remove("write", trace)
+        self.after_cancel(self.watching)
         if self.pending is not None:
             self.after_cancel(self.pending)
 

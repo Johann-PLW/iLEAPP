@@ -40,7 +40,8 @@ class AppState:
 
         self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar(), selection=[],
                                    folder_name=tk.StringVar(),
-                                   single_file=tk.BooleanVar(), detected=None, unlock=None,
+                                   single_file=tk.BooleanVar(), hash_files=tk.BooleanVar(),
+                                   detected=None, unlock=None,
                                    secrets={field["name"]: tk.StringVar()
                                             for field in (SECRETS.fields if SECRETS else ())})
         self.artifacts = SimpleNamespace(loader=None, listed=[], selected=set(), search="")
@@ -135,6 +136,8 @@ class AppState:
             return "Select an extraction first: nothing can be parsed without one."
         if not detected.kind:
             return detected.problem
+        if not all(os.path.exists(path) for path in self.source_paths()):
+            return "The extraction no longer exists."
         unlock = self.run.unlock
         if unlock is not None and not unlock.shown.done:
             return "The source is still being opened: see DETECTED."
@@ -150,6 +153,13 @@ class AppState:
         """The screen before or after the one on show, None at either end."""
         index = ORDER.index(self.step) + offset
         return ORDER[index] if 0 <= index < len(ORDER) else None
+
+    def previous_open(self):
+        """ The nearest screen before the one on show that can be opened otherwise None. """
+        for step in reversed(ORDER[:ORDER.index(self.step)]):
+            if self.can_go(step):
+                return step
+        return None
 
     def missing_for(self, step):
         """ What the user must still do before moving to a step. """

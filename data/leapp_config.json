@@ -13,6 +13,7 @@
     "title": "KEYCHAIN FILE",
     "fields": [
       {"name": "keychain", "label": "Optional. Captured from the device apart from the extraction.",
+       "if_absent": "No keychain file: apps that keep their key there stay encrypted, unless the extraction holds one.",
        "filetypes": [["Keychain files", "*.plist *.xml"], ["All files", "*"]]}
     ]
   },

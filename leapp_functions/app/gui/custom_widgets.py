@@ -6,7 +6,7 @@ import sys
 import tkinter as tk
 from tkinter import ttk
 
-from leapp_functions.app.gui import themes
+from leapp_functions.app.gui import images, themes
 
 
 BORDER = 2
@@ -16,6 +16,10 @@ ENTRY_PADX = 12
 ENTRY_PADY = 4
 SIDE_WIDTH = 300
 GAP = 14
+MARK_SIZE = 16
+MARKS = {"ok": ("circle-check", "text_primary"), "todo": ("circle", "text_primary"),
+         "attention": ("alert-triangle", "text_primary"), "problem": ("circle-x", "text_error"),
+         "optional": ("circle-minus", "text_secondary")}
 
 Field = namedtuple("Field", "label variable mono pick", defaults=(False, None))
 
@@ -177,6 +181,19 @@ class Caption(tk.Label):
         super().__init__(parent, text=text, anchor="w", justify="left", width=1, bg=background,
                          fg=app.colors.text_secondary, font=themes.sans(11))
         self.bind("<Configure>", wrap_to_width)
+
+
+def mark_line(card, app, row, status, text):
+    """ A line of a card: a mark, then the text in the colour of the mark. """
+    icon, role = MARKS[status]
+    color = getattr(app.colors, role)
+    mark = tk.Label(card.body, bg=card.background, borderwidth=0)
+    mark.image = images.load_icon(icon, MARK_SIZE, color)
+    mark.configure(image=mark.image)
+    mark.grid(row=row, column=0, sticky="nw", pady=(2 if row else 0, 0))
+    caption = Caption(card.body, app, text, card.background)
+    caption.configure(fg=color)
+    caption.grid(row=row, column=1, sticky="ew", padx=(8, 0), pady=(2 if row else 0, 0))
 
 
 class LabeledEntry(tk.Frame):

@@ -70,7 +70,9 @@ class StatusBar(tk.Frame):
                 subtitle += f" · {left_out} slow or large ones are unselected by default"
 
         target = state.neighbour(1)
-        blocked = state.step in ("source", "artifacts") and not state.can_go(target)
+        blocked = state.step in ("source", "artifacts", "review") and not state.can_go(target)
+        if blocked and state.step == "review":
+            title = "Not ready to run"
 
         self.title_label.configure(text=title)
         self.subtitle_label.configure(
@@ -89,8 +91,4 @@ class StatusBar(tk.Frame):
             self.next_button.set_text(next_text)
             self.next_button.set_enabled(not blocked)
 
-        # Back goes to the screen before, unless there is none or a run is on
-        previous = state.neighbour(-1)
-        can_back = (previous is not None and state.run_status != "running"
-                    and state.can_go(previous))
-        self.back_button.set_enabled(can_back)
+        self.back_button.set_enabled(state.previous_open() is not None)

@@ -178,7 +178,7 @@ class MainWindow(tk.Tk):
 
     def go_back(self):
         """ Navigate to the previous step. """
-        previous = self.app_state.neighbour(-1)
+        previous = self.app_state.previous_open()
         if previous is not None:
             self.go(previous)
 
