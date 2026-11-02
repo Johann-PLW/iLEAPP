@@ -1,7 +1,5 @@
 """
 The Artifacts screen: what will be parsed.
-A search field above two cards: the categories on the left, the artifacts of the category
-chosen on the right.
 """
 
 import tkinter as tk
@@ -9,12 +7,14 @@ from tkinter import ttk
 
 from PIL import ImageTk
 
-from leapp_functions.app.artifact_list import group_by_category, search, toggle
+from leapp_functions.app.artifact_list import by_title, group_by_category, search, toggle
 from leapp_functions.app.gui import images, themes
 from leapp_functions.app.gui.custom_widgets import (GAP, SIDE_WIDTH, Card, Field, LabeledEntry,
-                                                    OutlineButton, show_example)
+                                                    OutlineButton, Tooltip, show_example)
 
 SEARCH_EXAMPLE = "Search an artifact or a category"
+VIEWS = (("all", "All"), ("category", "Category"), ("profiles", "Profiles"))
+NOT_YET = {"profiles": "Not available yet."}
 SELECT_TEXTS = {False: ("Select all", "Deselect all"), True: ("Select found", "Deselect found")}
 SELECT_WIDTH = max(len(text) for texts in SELECT_TEXTS.values() for text in texts)
 COUNT_WIDTH = 64
@@ -132,45 +132,124 @@ class CategoryTree(tk.Frame):
 
 
 class SearchLine(tk.Frame):
-    """ The search field, then two buttons that select or unselect every artifact it finds or
-    every artifact while it is empty. """
+    """ The search field and a button for each way to view the list. """
 
-    def __init__(self, parent, app, variable, on_all):
+    def __init__(self, parent, app, variable, on_view):
         background = app.colors.main_bg
         super().__init__(parent, bg=background)
+        self.variable = variable
         self.columnconfigure(0, weight=1)
         field = LabeledEntry(self, app, Field("", variable), background=background)
         field.grid(row=0, column=0, sticky="ew")
         show_example(field, app, variable, SEARCH_EXAMPLE)
         self.entry = field.entry
+        self.views = {}
+        for column, (view, text) in enumerate(VIEWS, start=1):
+            button = OutlineButton(self, app, text=text, style="in_card", width=-len(text),
+                                   command=lambda view=view: on_view(view))
+            button.grid(row=0, column=column, padx=(8, 0))
+            if view in NOT_YET:
+                button.set_enabled(False)
+                Tooltip((button.button,), app, lambda view=view: NOT_YET[view])
+            self.views[view] = button
+
+    def show_view(self, chosen):
+        """ Show which view is chosen. """
+        for view, button in self.views.items():
+            button.set_style("chosen" if view == chosen else "in_card")
+
+
+class ListHeading(tk.Frame):
+    """ What are the listed artifacts, how many are selected, and buttons that select or
+    unselect them all. """
+
+    def __init__(self, parent, app, background, on_all):
+        super().__init__(parent, bg=background)
+        self.columnconfigure(0, weight=1)
+        self.title = tk.Label(self, anchor="w", width=1, bg=background,
+                              fg=app.colors.text_primary, font=themes.sans(13, "bold"))
+        self.title.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self.detail = tk.Label(self, anchor="w", width=1, bg=background,
+                               fg=app.colors.text_secondary, font=themes.sans(11))
+        self.detail.grid(row=1, column=0, sticky="ew", padx=(0, 8))
         self.buttons = [OutlineButton(self, app, text=text, style="in_card", width=SELECT_WIDTH,
                                       command=lambda select=select: on_all(select))
                         for text, select in zip(SELECT_TEXTS[False], (True, False))]
         for column, button in enumerate(self.buttons, start=1):
-            button.grid(row=0, column=column, padx=(8, 0))
+            button.grid(row=0, column=column, rowspan=2, padx=(8, 0))
 
-    def refresh(self, searching, found):
-        """ Name the buttons after what they act on, and let them be used only if the search
-        found something. """
+    def stack_buttons(self):
+        """ Put the buttons under the texts for a narrow card. """
+        for row, button in enumerate(self.buttons, start=2):
+            button.grid(row=row, column=0, rowspan=1, sticky="ew", padx=0, pady=(8, 0))
+
+    def refresh(self, title, detail, searching, listed):
+        """ Show what is listed. """
+        self.title.configure(text=title)
+        self.detail.configure(text=detail)
         for button, text in zip(self.buttons, SELECT_TEXTS[searching]):
             button.set_text(text)
-            button.set_enabled(found)
+            button.set_enabled(listed)
 
 
-def found_text(groups):
-    """ How many artifacts and categories a search found. """
+def found_text(groups, with_categories):
+    """ How many artifacts a search found. """
     found = sum(len(names) for names in groups.values())
     if not found:
         return "No artifact found"
     artifacts = "artifact" if found == 1 else "artifacts"
+    if not with_categories:
+        return f"{found} {artifacts} found"
     categories = "category" if len(groups) == 1 else "categories"
     return f"{found} {artifacts} found in {len(groups)} {categories}"
 
 
+def wrap_to_width(event):
+    """ Make the text of a label go to the next line. """
+    label = event.widget
+    margins = 2 * (int(label.cget("borderwidth")) + int(label.cget("padx"))
+                   + int(label.cget("highlightthickness")))
+    label.configure(wraplength=event.width - margins)
+
+
+class ArtifactDetails(tk.Frame):
+    """ The module and the name of an artifact. """
+
+    def __init__(self, parent, app, background, stacked=False):
+        colors = app.colors
+        super().__init__(parent, bg=background)
+        self.columnconfigure(1, weight=1)
+        tk.Frame(self, height=1, bg=colors.line).grid(row=0, column=0, columnspan=2, sticky="ew",
+                                                      pady=(0, 8))
+        self.values = {}
+        for row, (key, text) in enumerate((("category", "Category"),) + DETAILS if stacked
+                                          else DETAILS):
+            label = tk.Label(self, text=text, anchor="w", bg=background, fg=colors.text_secondary,
+                             font=themes.sans(11))
+            value = tk.Label(self, anchor="w", justify="left", width=1, bg=background,
+                             fg=colors.text_primary, font=themes.mono(12))
+            if stacked:
+                label.grid(row=2 * row + 1, column=0, columnspan=2, sticky="w",
+                           pady=(8 if row else 0, 0))
+                value.grid(row=2 * row + 2, column=0, columnspan=2, sticky="ew")
+                value.bind("<Configure>", wrap_to_width)
+            else:
+                label.grid(row=row + 1, column=0, sticky="w", padx=(0, 16))
+                value.grid(row=row + 1, column=1, sticky="ew")
+            self.values[key] = value
+
+    def show(self, artifact):
+        """ Show the details of an artifact. """
+        values = {"category": artifact.category, "module": f"{artifact.module}.py",
+                  "name": artifact.name} if artifact else {}
+        for key, value in self.values.items():
+            value.configure(text=values.get(key, ""))
+
+
 class ArtifactTree(tk.Frame):
-    """ The artifacts of a category: a box that selects or unselects it and its title, greyed
-    when it is not selected. Under the list, the details of the artifact chosen.
-    While a search is on, the artifacts found are listed under the name of their category. """
+    """ A list of artifacts with a box that selects or unselects it and its title, greyed when it is
+    not selected. Under the list, the details of the artifact chosen, unless they are shown
+    elsewhere. The artifacts can be listed under the name of their category. """
 
     def __init__(self, parent, app, background, on_toggle):
         colors = app.colors
@@ -190,31 +269,30 @@ class ArtifactTree(tk.Frame):
         bind_boxes(self.tree, self.toggle)
         self.tree.bind("<<TreeviewSelect>>", lambda _event: self.show_details())
 
-        details = tk.Frame(self, bg=background)
-        details.pack(fill="x", pady=(10, 0))
-        details.columnconfigure(1, weight=1)
-        tk.Frame(details, height=1, bg=colors.line).grid(row=0, column=0, columnspan=2,
-                                                         sticky="ew", pady=(0, 8))
-        self.details = {}
-        for row, (key, text) in enumerate(DETAILS, start=1):
-            tk.Label(details, text=text, anchor="w", bg=background, fg=colors.text_secondary,
-                     font=themes.sans(11)).grid(row=row, column=0, sticky="w", padx=(0, 16))
-            self.details[key] = tk.Label(details, anchor="w", width=1, bg=background,
-                                         fg=colors.text_primary, font=themes.mono(12))
-            self.details[key].grid(row=row, column=1, sticky="ew")
+        self.details = [ArtifactDetails(self, app, background)]
 
-    def show(self, groups, found):
+    def add_details(self, details):
+        """ Show the details of the artifact chosen in another place. """
+        self.details.append(details)
+
+    def show_details_below(self, shown):
+        """ Show the details under the list or not. """
+        if shown:
+            self.details[0].pack(fill="x", pady=(10, 0))
+        else:
+            self.details[0].pack_forget()
+
+    def show(self, groups, headers):
         """ List the artifacts of groups, and choose the first one.
         Args:
             groups (dict): the names of the artifacts to list, by category.
-            found (bool): whether they were found by a search, which lists them under their
-                category.
+            headers (bool): whether to list them under the name of their category.
         """
         self.tree.delete(*self.tree.get_children())
         self.shown = {}
         for category, names in groups.items():
             parent = ""
-            if found:
+            if headers:
                 parent = self.tree.insert("", "end", iid=HEADER + category, text=category,
                                           open=True, tags=("header",))
             for name in names:
@@ -225,11 +303,11 @@ class ArtifactTree(tk.Frame):
         first = next(iter(self.shown), None)
         if first is not None:
             choose(self.tree, first)
+            self.tree.yview_moveto(0)
         self.show_details()
 
     def reveal(self, category):
-        """ Scroll the artifacts found so that those of a category come first, and choose the
-        first one. """
+        """ Scroll the list so that the artifacts of a category come first. """
         header = HEADER + category
         if not self.tree.exists(header):
             return
@@ -255,9 +333,8 @@ class ArtifactTree(tk.Frame):
         """ Show the module and the name of the artifact chosen. """
         selection = self.tree.selection()
         artifact = self.shown.get(selection[0]) if selection else None
-        values = {"module": f"{artifact.module}.py", "name": artifact.name} if artifact else {}
-        for key, label in self.details.items():
-            label.configure(text=values.get(key, ""))
+        for details in self.details:
+            details.show(artifact)
 
     def toggle(self, row):
         """ Select an artifact, or unselect it if it is selected. A category name has no box. """
@@ -269,7 +346,7 @@ class ArtifactTree(tk.Frame):
 
 
 class ArtifactsScreen(tk.Frame):
-    """ The search field, the categories and the artifacts. """
+    """ The artifacts screen layout. """
 
     def __init__(self, parent, app):
         colors = app.colors
@@ -281,75 +358,139 @@ class ArtifactsScreen(tk.Frame):
         self.columnconfigure(1, weight=1)
         self.rowconfigure(1, weight=1)
 
-        self.search = tk.StringVar(value=app.app_state.artifacts.search)
-        self.search_line = SearchLine(self, app, self.search, self.select_found)
+        search_text = tk.StringVar(value=app.app_state.artifacts.search)
+        self.search_line = SearchLine(self, app, search_text, self.view_chosen)
         self.search_line.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, GAP))
 
-        categories = Card(self, app, "CATEGORIES")
+        categories = Card(self, app, "BY CATEGORY")
         categories.grid(row=1, column=0, sticky="nsew")
         self.category_list = CategoryTree(categories.body, app, categories.background,
                                           self.toggled)
         self.category_list.pack(fill="both", expand=True)
 
-        artifacts = Card(self, app, "ARTIFACTS")
+        summary = Card(self, app)
+        summary.grid(row=1, column=0, sticky="nsew")
+        summary_heading = ListHeading(summary.body, app, summary.background, self.select_listed)
+        summary_heading.stack_buttons()
+        summary_heading.pack(fill="x")
+
+        artifacts = Card(self, app)
         artifacts.grid(row=1, column=1, sticky="nsew", padx=(GAP, 0))
-        self.found = tk.Label(artifacts.body, anchor="w", bg=artifacts.background,
-                              fg=colors.text_secondary, font=themes.sans(11))
+        list_heading = ListHeading(artifacts.body, app, artifacts.background, self.select_listed)
+        self.sides = {True: (summary, summary_heading), False: (categories, list_heading)}
         self.artifact_list = ArtifactTree(artifacts.body, app, artifacts.background, self.toggled)
         self.artifact_list.pack(fill="both", expand=True)
 
+        summary_details = ArtifactDetails(summary.body, app, summary.background, stacked=True)
+        summary_details.pack(fill="x", pady=(14, 0))
+        self.artifact_list.add_details(summary_details)
+
         self.category_list.tree.bind("<<TreeviewSelect>>", lambda _event: self.category_chosen())
-        trace = self.search.trace_add("write", lambda *_args: self.searched())
-        self.bind("<Destroy>", lambda event: event.widget is self and self.search.trace_remove(
+        trace = search_text.trace_add("write", lambda *_args: self.searched())
+        self.bind("<Destroy>", lambda event: event.widget is self and search_text.trace_remove(
             "write", trace))
-        self.searched()
+        self.view_chosen(app.app_state.artifacts.view)
 
     def searching(self):
         """ Whether a search is on. """
-        return bool(self.search.get())
+        return bool(self.search_line.variable.get())
+
+    def viewing_all(self):
+        """ Is the view "All" chosen. """
+        return self.app.app_state.artifacts.view == "all"
+
+    def listing_all(self):
+        """ Does the list hold everything found rather than one category. """
+        return self.searching() or self.viewing_all()
+
+    def listed_groups(self):
+        """ The names of the artifacts listed, by category. """
+        if self.listing_all():
+            return self.groups
+        category = self.category_list.chosen()
+        return {category: self.groups[category]} if category in self.groups else {}
+
+    def refresh_heading(self):
+        """ What is listed and how many of them are selected. """
+        groups = self.listed_groups()
+        names = [name for group in groups.values() for name in group]
+        if self.searching():
+            title = "Search results"
+            detail = found_text(self.groups, with_categories=not self.viewing_all())
+        else:
+            chosen = len(self.app.app_state.artifacts.selected.intersection(names))
+            title = "All artifacts" if self.listing_all() else next(iter(groups), "")
+            detail = f"{chosen} of {len(names)} selected"
+        _card, heading = self.sides[self.viewing_all()]
+        heading.refresh(title, detail, self.searching(), bool(names))
+
+    def view_chosen(self, view):
+        """ A way to view the chosen list chosen. """
+        self.app.app_state.artifacts.view = view
+        self.search_line.show_view(view)
+        self.place_cards()
+        self.searched()
+
+    def place_cards(self):
+        """ Show the card on the left of the view chosen, and the heading above the artifacts
+        unless that card holds it. """
+        viewing_all = self.viewing_all()
+        self.sides[viewing_all][0].grid()
+        self.sides[not viewing_all][0].grid_remove()
+        self.artifact_list.show_details_below(not viewing_all)
+        list_heading = self.sides[False][1]
+        if viewing_all:
+            list_heading.pack_forget()
+        else:
+            list_heading.pack(fill="x", pady=(0, 10), before=self.artifact_list)
 
     def searched(self):
-        """ The text searched changed: list what it finds. """
+        """ The text searched or the view changed. """
         state = self.app.app_state
-        state.artifacts.search = self.search.get()
-        self.groups = group_by_category(search(state.artifacts.listed, state.artifacts.search))
+        state.artifacts.search = self.search_line.variable.get()
+        found = search(state.artifacts.listed, state.artifacts.search)
+        self.groups = group_by_category(found)
         self.category_list.show(self.groups)
-        self.search_line.refresh(self.searching(), bool(self.groups))
-        if self.searching():
-            self.found.configure(text=found_text(self.groups))
-            self.found.pack(fill="x", pady=(0, 10), before=self.artifact_list)
-            self.artifact_list.show(self.groups, found=True)
+        if self.viewing_all():
+            self.artifact_list.show({"": by_title(found)}, headers=False)
+            self.refresh_heading()
+        elif self.searching():
+            self.artifact_list.show(self.groups, headers=True)
+            self.refresh_heading()
         else:
-            self.found.pack_forget()
             self.category_chosen()
 
     def category_chosen(self):
-        """ A category was chosen: show its artifacts, or those found in it. """
-        category = self.category_list.chosen()
-        if category is None:
+        """ Chosen category: show its artifacts, or scroll to them if the list holds them
+        with others. The view "All" shows no categories to choose from. """
+        if self.viewing_all():
             return
-        if self.searching():
-            self.artifact_list.reveal(category)
-        else:
-            self.artifact_list.show({category: self.groups.get(category, [])}, found=False)
+        category = self.category_list.chosen()
+        if category is not None:
+            if self.listing_all():
+                self.artifact_list.reveal(category)
+            else:
+                self.artifact_list.show({category: self.groups.get(category, [])}, headers=False)
+        self.refresh_heading()
 
     def toggled(self, category):
         """ Artifacts of a category were selected or unselected. """
         self.category_list.refresh_row(category)
         self.artifact_list.refresh_rows()
+        self.refresh_heading()
         self.app.app_state.on_change()
 
-    def select_found(self, select):
-        """ Select every artifact found, or unselect them all. Every artifact is found while the
-        search is empty. """
+    def select_listed(self, select):
+        """ Select every artifact listed, or unselect them all. """
         selected = self.app.app_state.artifacts.selected
-        for names in self.groups.values():
+        for names in self.listed_groups().values():
             if select:
                 selected.update(names)
             else:
                 selected.difference_update(names)
         self.category_list.refresh_rows()
         self.artifact_list.refresh_rows()
+        self.refresh_heading()
         self.app.app_state.on_change()
 
     def focus_search(self):

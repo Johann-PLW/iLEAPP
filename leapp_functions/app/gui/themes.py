@@ -102,6 +102,8 @@ def apply_styles(style, colors):
              colors.main_bg, colors.text_primary),
             ("Filled", colors.header_bg, colors.main_bg, (colors.line, colors.main_bg),
              colors.header_bg, colors.text_primary),
+            ("Chosen", colors.header_bg, colors.main_bg, (colors.line, colors.main_bg),
+             colors.header_bg, colors.text_primary),
             ("Quiet", colors.main_bg, colors.text_primary, (colors.main_bg, colors.text_legend),
              colors.line, colors.text_primary),
             ("Field", colors.line, colors.text_primary, (colors.line, colors.text_legend),
@@ -117,7 +119,8 @@ def apply_styles(style, colors):
                   foreground=[("disabled", disabled_text), ("pressed", hover_text),
                               ("active", hover_text)],
                   bordercolor=states, lightcolor=states, darkcolor=states, focuscolor=states)
-    style.configure("Field.TButton", padding=(18, 3, 18, 4))
+    for name in ("Field", "Chosen"):
+        style.configure(f"{name}.TButton", padding=(18, 3, 18, 4))
     style_check_box(style, colors)
     style_lists(style, colors)
 

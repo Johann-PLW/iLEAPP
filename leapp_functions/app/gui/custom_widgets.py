@@ -21,7 +21,8 @@ Field = namedtuple("Field", "label variable mono pick", defaults=(False, None))
 
 
 BUTTON_STYLES = {"outline": "Primary.TButton", "filled": "Filled.TButton",
-                 "quiet": "Quiet.TButton", "in_card": "Field.TButton"}
+                 "quiet": "Quiet.TButton", "in_card": "Field.TButton",
+                 "chosen": "Chosen.TButton"}
 
 
 class OutlineButton(tk.Frame):
@@ -29,15 +30,28 @@ class OutlineButton(tk.Frame):
     - "outline": the colour of the header for its border and its text, the default;
     - "filled": the colour of its border for its background instead;
     - "quiet": for the content of a screen: a grey border, no fill;
-    - "in_card": for next to the inputs of a card: a grey fill.
+    - "in_card": for next to the inputs of a card: a grey fill;
+    - "chosen": an "in_card" button that shows the choice made, filled with the colour of the
+      header.
     The other options, such as text and command, are those of the ttk.Button inside.
     """
     def __init__(self, parent, app, style="outline", **button_options):
-        colors = self.colors = app.colors
-        self.border = colors.button_border if style in ("quiet", "in_card") else colors.header_bg
+        self.colors = app.colors
+        self.border = self.border_of(style)
         super().__init__(parent, bg=self.border)
         self.button = ttk.Button(self, style=BUTTON_STYLES[style], **button_options)
-        self.button.pack(padx=BORDER, pady=BORDER)
+        self.button.pack(fill="both", expand=True, padx=BORDER, pady=BORDER)
+
+    def border_of(self, style):
+        """ The border colour of a style. """
+        colors = self.colors
+        return colors.button_border if style in ("quiet", "in_card") else colors.header_bg
+
+    def set_style(self, style):
+        """ Change the style of the button. """
+        self.border = self.border_of(style)
+        self.button.configure(style=BUTTON_STYLES[style])
+        self.configure(bg=self.border)
 
     def set_text(self, text):
         """ Set the text of the button. """
