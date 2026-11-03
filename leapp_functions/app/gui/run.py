@@ -1,5 +1,5 @@
 """
-The Run screen: how far the run has gone, and its log.
+The Run screen: the log of the run. The status bar says how far it has gone.
 """
 
 import os
@@ -10,7 +10,7 @@ from types import SimpleNamespace
 from leapp_functions.app import artifact_list, new_run
 from leapp_functions.app.run_worker import RunWorker
 from leapp_functions.app.gui import themes
-from leapp_functions.app.gui.custom_widgets import GAP, Card
+from leapp_functions.app.gui.custom_widgets import Card
 
 POLL = 50  # milliseconds: the log still scrolls smoothly, and polling is not itself the load
 
@@ -59,6 +59,7 @@ class RunControl:
         worker = self.app.app_state.run.worker
         worker.poll()
         self.app.widgets["screen"].refresh()
+        self.app.widgets["status_bar"].show_progress()
         if worker.shown.outcome is None:
             self.watch_id = self.app.after(POLL, self.watch)
         else:
@@ -113,7 +114,7 @@ class RunControl:
 
 
 class RunScreen(tk.Frame):
-    """ The progress of the run and its log. """
+    """ The log of the run. """
 
     def __init__(self, parent, app):
         colors = app.colors
@@ -121,18 +122,10 @@ class RunScreen(tk.Frame):
         self.worker = app.app_state.run.worker
         self.written = 0
         self.columnconfigure(0, weight=1)
-        self.rowconfigure(1, weight=1)
-
-        card = Card(self, app, "PROGRESS")
-        card.grid(row=0, column=0, sticky="ew")
-        self.count = tk.Label(card.body, anchor="w", bg=card.background, fg=colors.text_primary,
-                              font=themes.sans(12))
-        self.count.pack(fill="x")
-        self.progress_bar = ttk.Progressbar(card.body, style="Run.Horizontal.TProgressbar")
-        self.progress_bar.pack(fill="x", pady=(6, 0))
+        self.rowconfigure(0, weight=1)
 
         card = Card(self, app, "LOG")
-        card.grid(row=1, column=0, sticky="nsew", pady=(GAP, 0))
+        card.grid(row=0, column=0, sticky="nsew")
         card.body.rowconfigure(0, weight=1)
         card.body.columnconfigure(0, weight=1)
         self.log = tk.Text(card.body, height=1, wrap="char", state="disabled", relief="flat",
@@ -151,8 +144,6 @@ class RunScreen(tk.Frame):
     def refresh(self):
         """ Show what the run has reported since the last call. """
         shown = self.worker.shown
-        self.progress_bar.configure(maximum=max(shown.total, 1), value=shown.done)
-        self.count.configure(text=f"{shown.done:,} of {shown.total:,} artifacts done")
         if self.written == len(shown.log):
             return
         following = self.log.yview()[1] >= 1
