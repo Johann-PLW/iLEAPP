@@ -198,7 +198,7 @@ class OutputCard(tk.Frame):
         # Characters a folder name cannot hold are refused as they are typed
         name.entry.configure(validate="key", validatecommand=(
             self.register(lambda proposed: sanitize_file_name(proposed) == proposed), "%P"))
-        show_example(name, app, run.folder_name, f"Automatic: {default_output_folder_name()}")
+        show_example(name, app, run.folder_name, default_output_folder_name())
 
         traces = [(variable, variable.trace_add("write", lambda *_args: app.app_state.on_change()))
                   for variable in (run.output, run.folder_name)]

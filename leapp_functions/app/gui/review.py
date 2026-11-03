@@ -47,8 +47,7 @@ def summary_rows(state):
             ("Artifacts", artifacts_text(state.artifacts)),
             ("Profile", artifact_list.profile_for_report(state.artifacts) or NONE),
             ("Output folder", run.output.get().strip()),
-            ("Report folder", run.folder_name.get().strip()
-             or f"Automatic: {default_output_folder_name()}"))
+            ("Report folder", run.folder_name.get().strip() or default_output_folder_name()))
 
 
 def profile_notices(artifacts):
