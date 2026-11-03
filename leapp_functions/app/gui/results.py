@@ -18,7 +18,9 @@ from scripts.lavafuncs import lava_json_name
 
 KEY_WIDTH = 104
 ROW_GAP = 8
+BUTTON_GAP = 8
 REPORT_FILE = "index.html"
+TSV_FOLDER = "_TSV Exports"
 ERRORS_SHOWN = 6
 
 
@@ -129,15 +131,21 @@ class ResultsScreen(tk.Frame):
 
         written = self.worker.shown.outcome != "failed"
         launcher = self.worker.shown.lava_launcher
+        folder = self.worker.shown.folder
         buttons = tk.Frame(card.body, bg=card.background)
         buttons.pack(anchor="w", pady=(14, 0))
-        for text, command, enabled in (
-                ("Open report", self.open_report, written),
+        buttons.columnconfigure((0, 2), uniform="button")
+        buttons.columnconfigure(1, minsize=BUTTON_GAP)
+        for index, (text, command, enabled) in enumerate((
+                ("Open HTML report", self.open_report, written),
                 ("Open in LAVA", self.open_lava, written) if launcher
                 else ("Explore LAVA", self.explore_lava, True),
-                ("Open output folder", self.open_folder, bool(self.worker.shown.folder))):
+                ("Open TSV Folder", self.open_tsv_folder,
+                 bool(folder) and os.path.isdir(os.path.join(folder, TSV_FOLDER))),
+                ("Open output folder", self.open_folder, bool(folder)))):
             button = OutlineButton(buttons, self.app, style="in_card", text=text, command=command)
-            button.pack(side="left", padx=(0, 8))
+            row, column = divmod(index, 2)
+            button.grid(row=row, column=column * 2, sticky="ew", pady=(row * BUTTON_GAP, 0))
             button.set_enabled(enabled)
 
     def build_rows(self, card):
@@ -180,11 +188,19 @@ class ResultsScreen(tk.Frame):
                                  f"{leapp.name} could not open the project in LAVA:\n{error}",
                                  parent=self.app)
 
-    def open_folder(self):
-        """ The folder of the report, in the file manager. """
+    def open_in_file_manager(self, folder, name):
+        """ Open a folder in the file manager. """
         try:
-            open_output_folder(self.worker.shown.folder)
+            open_output_folder(folder)
         except OSError as error:
-            messagebox.showerror("Unable to open output folder",
-                                 f"{leapp.name} could not open the output folder:\n{error}",
+            messagebox.showerror(f"Unable to open {name}",
+                                 f"{leapp.name} could not open the {name}:\n{error}",
                                  parent=self.app)
+
+    def open_folder(self):
+        """ The report folder. """
+        self.open_in_file_manager(self.worker.shown.folder, "output folder")
+
+    def open_tsv_folder(self):
+        """ The folder of the TSV exports, in the report folder. """
+        self.open_in_file_manager(os.path.join(self.worker.shown.folder, TSV_FOLDER), "TSV folder")
