@@ -9,6 +9,7 @@ The widgets are made once. refresh() changes their texts, their style and their 
 import tkinter as tk
 
 from leapp_functions.app.gui import themes
+from leapp_functions.app.gui.app_state import is_waiting
 from leapp_functions.app.gui.custom_widgets import OutlineButton
 
 # For each screen: its title, its subtitle and the text of its main button.
@@ -38,13 +39,11 @@ class StatusBar(tk.Frame):
     """ The title and subtitle of the screen, and the Back and Next buttons. """
 
     def __init__(self, parent, app):
-        colors = self.colors = app.colors
+        colors = app.colors
         super().__init__(parent, bg=colors.main_bg)
         self.app = app
 
-        # A line across the bar, and the room under it, then the texts on the left taking the
-        # width left over, then the two buttons.
-        tk.Frame(self, height=1, bg=colors.border).grid(row=0, column=0, columnspan=3, sticky="ew")
+        tk.Frame(self, height=1, bg=colors.border).grid(row=0, column=0, columnspan=4, sticky="ew")
         self.columnconfigure(0, weight=1)
 
         texts = tk.Frame(self, bg=colors.main_bg)
@@ -58,17 +57,18 @@ class StatusBar(tk.Frame):
 
         self.back_button = OutlineButton(self, app, text="Back", command=app.go_back)
         self.back_button.grid(row=1, column=1, padx=(16, 0), pady=(8, 0))
-        # Next, and in its place on the Run screen the button that stops the run
         self.next_button = OutlineButton(self, app, command=app.go_next, style="filled")
         self.next_button.grid(row=1, column=2, padx=(10, 0), pady=(8, 0))
         self.stop_button = OutlineButton(self, app, command=app.go_next)
         self.stop_button.grid(row=1, column=2, padx=(10, 0), pady=(8, 0))
+        self.close_button = OutlineButton(self, app, text="Close", command=app.close, style="filled")
+        self.close_button.grid(row=1, column=3, padx=(10, 0), pady=(8, 0))
 
         self.refresh()
 
     def refresh(self):
         """ Show the state: the texts of the screen, and which buttons can be used. """
-        colors, state = self.colors, self.app.app_state
+        colors, state = self.app.colors, self.app.app_state
         title, subtitle, next_text = TEXTS[state.step]
         running = state.step == "run" and state.run_status == "running"
         stopping = running and state.run.worker.shown.stopping
@@ -92,10 +92,18 @@ class StatusBar(tk.Frame):
         if blocked and state.step == "review":
             title = "Not ready to run"
 
+        missing = state.missing_for(target) if blocked else ""
         self.title_label.configure(text=title)
         self.subtitle_label.configure(
-            text=state.missing_for(target) if blocked else subtitle,
-            fg=colors.text_error if blocked else colors.text_secondary)
+            text=missing or subtitle,
+            fg=colors.text_error if missing and not is_waiting(missing) else colors.text_secondary)
+
+        if state.step == "results":
+            self.next_button.set_style("outline")
+            self.close_button.grid()
+        else:
+            self.next_button.set_style("filled")
+            self.close_button.grid_remove()
 
         # Only one of the two is shown. grid_remove() hides a widget and keeps where it was
         # placed, which grid() brings back.

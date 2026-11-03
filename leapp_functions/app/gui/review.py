@@ -8,7 +8,7 @@ from tkinter import ttk
 
 from leapp_functions.app import artifact_list
 from leapp_functions.app.gui import themes
-from leapp_functions.app.gui.app_state import SECRETS
+from leapp_functions.app.gui.app_state import SECRETS, is_waiting
 from leapp_functions.app.gui.artifacts import unknown_text
 from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, mark_line, two_columns,
                                                     wrap_to_width)
@@ -76,7 +76,7 @@ def notices(state):
 
     lines = [("attention", text) for text in attention]
     if problem:
-        lines.insert(0, ("problem", problem))
+        lines.insert(0, ("todo" if is_waiting(problem) else "problem", problem))
     if not lines:
         lines.append(("ok", "Nothing needs your attention."))
     if state.case_is_empty():

@@ -16,6 +16,7 @@ from scripts.vendor import qnxprobe
 Detected = namedtuple("Detected", "kind label note problem", defaults=("", ""))
 
 NO_ANSWER = Detected("", "No answer", problem="Its drive does not answer: it may be disconnected.")
+LOOKING = Detected("", "Looking at the source", note="Waiting for its drive to answer.")
 
 LABELS = {"fs": "Folder of extracted files", "tar": "tar archive", "gz": "tar.gz archive",
           "zip": "zip archive", "raw": "Raw disk image"}

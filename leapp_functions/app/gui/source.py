@@ -8,9 +8,9 @@ from tkinter import filedialog, ttk
 
 from leapp_functions import leapp
 from leapp_functions.app import history, input_type
-from leapp_functions.app.disk import FILE, SILENT, path_status
+from leapp_functions.app.disk import FILE, PENDING, SILENT, path_status
 from leapp_functions.app.gui import themes
-from leapp_functions.app.gui.app_state import SECRETS
+from leapp_functions.app.gui.app_state import SECRETS, WAITING
 from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, Field, FileField,
                                                     LabeledEntry, OutlineButton, Tooltip,
                                                     mark_line, show_example, two_columns)
@@ -315,6 +315,8 @@ class ChecksCard(tk.Frame):
         state = self.app.app_state
         if state.run.detected is None:
             lines = [("todo", "Extraction: none chosen yet.")]
+        elif state.missing_for_source() == WAITING.format("extraction"):
+            lines = [("todo", "Extraction: waiting for its drive to answer.")]
         elif state.missing_for_source():
             lines = [("problem", "Extraction: cannot be read yet, see DETECTED.")]
         else:
@@ -323,6 +325,8 @@ class ChecksCard(tk.Frame):
             path = variable.get()
             if not path:
                 lines.append(("optional", f"{name.capitalize()}: optional, none chosen."))
+            elif path_status(path) == PENDING:
+                lines.append(("todo", f"{name.capitalize()}: waiting for its drive to answer."))
             elif path_status(path) == SILENT:
                 lines.append(("problem", f"{name.capitalize()}: the file does not answer."))
             elif path_status(path) != FILE:
@@ -330,7 +334,7 @@ class ChecksCard(tk.Frame):
             else:
                 lines.append(("ok", f"{name.capitalize()}: {os.path.basename(path)}"))
         output = state.missing_for_output()
-        if not state.run.output.get().strip():
+        if not state.run.output.get().strip() or output == WAITING.format("output folder"):
             lines.append(("todo", f"Output: {output}"))
         else:
             lines.append(("problem", f"Output: {output}") if output else ("ok", "Output: ready."))
@@ -370,11 +374,12 @@ class DetectedCard(tk.Frame):
         """ Show again what has changed on the disk, as when a drive goes or comes back, and
         ask again for a source that has not answered yet. """
         state = self.app.app_state
-        if self.look() != self.seen or state.run.detected == input_type.NO_ANSWER:
+        if self.look() != self.seen or state.run.detected in (input_type.NO_ANSWER, input_type.LOOKING):
             self.refresh()
             state.on_change()
             self.seen = self.look()
-        self.watching = self.after(WATCH_DELAY, self.watch)
+        looking = state.run.detected == input_type.LOOKING
+        self.watching = self.after(POLL_DELAY if looking else WATCH_DELAY, self.watch)
 
     def schedule(self):
         """ Look at the source a moment after the last change of the field. """

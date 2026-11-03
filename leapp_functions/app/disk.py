@@ -11,6 +11,7 @@ import threading
 import time
 
 FILE, FOLDER, OTHER, MISSING, SILENT = "file", "folder", "other", "missing", "silent"
+PENDING = "pending"
 
 WAIT = 0.05  # seconds the window waits for an answer
 FRESH = 0.5  # seconds an answer is good for
@@ -60,7 +61,7 @@ class Probe:
 
 def ask(key, work, wait=WAIT, fresh=FRESH):
     """
-    The answer to a question, or SILENT.
+    The answer to a question.
     Args:
         key: what identifies the question.
         work (function): gets the answer, on another thread: it must not touch a Tk object.
@@ -69,7 +70,7 @@ def ask(key, work, wait=WAIT, fresh=FRESH):
     """
     probe = PROBES.get(key)
     if probe is None or probe.is_stale(fresh):
-        probe = PROBES[key] = Probe(work, probe.answer if probe else SILENT)
+        probe = PROBES[key] = Probe(work, probe.answer if probe else PENDING)
         for old_key, old in list(PROBES.items()):
             if old.finished.is_set() and old.age() > FORGET:
                 del PROBES[old_key]
@@ -88,5 +89,5 @@ def status_of(path):
 
 
 def path_status(path):
-    """ FILE, FOLDER, OTHER, MISSING or SILENT, from status_of() on its own thread. """
+    """ FILE, FOLDER, OTHER, MISSING, PENDING or SILENT, from status_of() on its own thread. """
     return ask(("status", path), lambda: status_of(path))

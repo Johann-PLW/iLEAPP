@@ -11,7 +11,7 @@ from types import SimpleNamespace
 
 from leapp_functions import leapp
 from leapp_functions.app import input_type
-from leapp_functions.app.disk import FILE, FOLDER, MISSING, SILENT, ask, path_status
+from leapp_functions.app.disk import FILE, FOLDER, MISSING, PENDING, SILENT, ask, path_status
 from leapp_functions.app.platform import validate_filename
 from leapp_functions.app.unlock import UNLOCKERS, Unlock
 from scripts.filetype import guess_mime
@@ -23,6 +23,31 @@ SECRETS = getattr(leapp, "secrets", None)
 STAGE_OF = {"review": "run"}
 DETECT_WAIT = 0.3
 NO_ANSWER = "The {} does not answer: its drive may be disconnected."
+WAITING = "Waiting for the {} to answer."
+
+
+def is_waiting(message):
+    """ A message only says if that a drive has not answered yet. """
+    return message.startswith(WAITING.partition("{")[0])
+
+
+def unanswered(status, name):
+    """ What to say of a path, given by its name, whose drive has not answered; else "". """
+    if status == PENDING:
+        return WAITING.format(name)
+    return NO_ANSWER.format(name) if status == SILENT else ""
+
+
+def report_folder_problem(folder, name):
+    """ Why the report cannot take this name in the output folder. """
+    _valid, error = validate_filename(name)
+    if error:
+        return error
+    status = path_status(os.path.join(folder, name))
+    if status == MISSING:
+        return ""
+    return (unanswered(status, "output folder")
+            or f"A folder named {name} is already in the output folder.")
 
 CASE_KEYS = {"Case Number": "number", "Agency": "agency", "Agency Logo Path": "logo_path",
              "Agency Logo mimetype": "logo_mimetype", "Agency Logo base64": "logo_base64",
@@ -119,6 +144,8 @@ class AppState:
                        wait=DETECT_WAIT, fresh=0)
         if detected == SILENT:
             detected = input_type.NO_ANSWER
+        elif detected == PENDING:
+            detected = input_type.LOOKING
         if detected != self.run.detected:
             self.run.detected = detected
             self.start_unlock()
@@ -151,11 +178,14 @@ class AppState:
         detected = self.run.detected
         if detected is None:
             return "Select an extraction first: nothing can be parsed without one."
+        if detected == input_type.LOOKING:
+            return WAITING.format("extraction")
         if not detected.kind:
             return detected.problem
         statuses = [path_status(path) for path in self.source_paths()]
-        if SILENT in statuses:
-            return NO_ANSWER.format("extraction")
+        for status in statuses:
+            if unanswered(status, "extraction"):
+                return unanswered(status, "extraction")
         if MISSING in statuses:
             return "The extraction no longer exists."
         return unlock_problem(self.run.unlock)
@@ -191,24 +221,19 @@ class AppState:
         if not folder:
             return "Choose an output folder."
         status = path_status(folder)
-        if status == SILENT:
-            return NO_ANSWER.format("output folder")
+        if unanswered(status, "output folder"):
+            return unanswered(status, "output folder")
         if status != FOLDER:
             return "This output folder does not exist."
         name = self.run.folder_name.get().strip()
-        if not name:
-            return ""
-        _valid, error = validate_filename(name)
-        if not error and path_status(os.path.join(folder, name)) != MISSING:
-            return f"A folder named {name} is already in the output folder."
-        return error or ""
+        return report_folder_problem(folder, name) if name else ""
 
     def missing_for_secrets(self):
         """ A file chosen to decrypt apps that is no longer there. """
         for name, variable in self.run.secrets.items():
             status = path_status(variable.get()) if variable.get() else FILE
-            if status == SILENT:
-                return NO_ANSWER.format(f"{name} file")
+            if unanswered(status, f"{name} file"):
+                return unanswered(status, f"{name} file")
             if status != FILE:
                 return f"The {name} file no longer exists."
         return ""
