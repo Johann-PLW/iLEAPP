@@ -19,6 +19,7 @@ from scripts.lavafuncs import lava_json_name
 KEY_WIDTH = 104
 ROW_GAP = 8
 BUTTON_GAP = 8
+BUTTONS_PER_LINE = 2
 REPORT_FILE = "index.html"
 TSV_FOLDER = "_TSV Exports"
 ERRORS_SHOWN = 6
@@ -102,6 +103,42 @@ class ErrorList(tk.Frame):
             self.scrollbar.grid_remove()
 
 
+class ResultButtons(tk.Frame):
+    """ Buttons of one size: side by side if the width of the card has room for them all,
+    otherwise two by line. They never make the card wider. """
+
+    def __init__(self, parent, app, background, actions):
+        super().__init__(parent, bg=background)
+        self.buttons = []
+        for text, command, enabled in actions:
+            button = OutlineButton(self, app, style="in_card", text=text, command=command)
+            button.set_enabled(enabled)
+            self.buttons.append(button)
+        self.layout = None
+        self.arrange(BUTTONS_PER_LINE, 0)
+        parent.bind("<Configure>", self.fit, add="+")
+
+    def fit(self, event):
+        """ The width of the card is known, and by now the width of the buttons. """
+        count = len(self.buttons)
+        width = max(button.winfo_reqwidth() for button in self.buttons)
+        room = count * width + (count - 1) * BUTTON_GAP <= event.width
+        self.arrange(count if room else BUTTONS_PER_LINE, width)
+
+    def arrange(self, per_line, width):
+        """ Put the buttons on their lines. """
+        if (per_line, width) == self.layout:
+            return
+        self.layout = (per_line, width)
+        for index, button in enumerate(self.buttons):
+            row, column = divmod(index, per_line)
+            button.grid(row=row, column=column, sticky="ew", padx=(BUTTON_GAP if column else 0, 0),
+                        pady=(BUTTON_GAP if row else 0, 0))
+        for column in range(len(self.buttons)):
+            self.columnconfigure(column, minsize=0 if column >= per_line
+                                 else width + (BUTTON_GAP if column else 0))
+
+
 class ResultsScreen(tk.Frame):
     """ The end of the run. """
 
@@ -132,21 +169,13 @@ class ResultsScreen(tk.Frame):
         written = self.worker.shown.outcome != "failed"
         launcher = self.worker.shown.lava_launcher
         folder = self.worker.shown.folder
-        buttons = tk.Frame(card.body, bg=card.background)
-        buttons.pack(anchor="w", pady=(14, 0))
-        buttons.columnconfigure((0, 2), uniform="button")
-        buttons.columnconfigure(1, minsize=BUTTON_GAP)
-        for index, (text, command, enabled) in enumerate((
-                ("Open HTML report", self.open_report, written),
-                ("Open in LAVA", self.open_lava, written) if launcher
-                else ("Explore LAVA", self.explore_lava, True),
-                ("Open TSV Folder", self.open_tsv_folder,
-                 bool(folder) and os.path.isdir(os.path.join(folder, TSV_FOLDER))),
-                ("Open output folder", self.open_folder, bool(folder)))):
-            button = OutlineButton(buttons, self.app, style="in_card", text=text, command=command)
-            row, column = divmod(index, 2)
-            button.grid(row=row, column=column * 2, sticky="ew", pady=(row * BUTTON_GAP, 0))
-            button.set_enabled(enabled)
+        ResultButtons(card.body, self.app, card.background, (
+            ("Open HTML report", self.open_report, written),
+            ("Open in LAVA", self.open_lava, written) if launcher
+            else ("Explore LAVA", self.explore_lava, True),
+            ("Open TSV Folder", self.open_tsv_folder,
+             bool(folder) and os.path.isdir(os.path.join(folder, TSV_FOLDER))),
+            ("Open output folder", self.open_folder, bool(folder)))).pack(anchor="w", pady=(14, 0))
 
     def build_rows(self, card):
         """ The lines of the summary, in the card. """
