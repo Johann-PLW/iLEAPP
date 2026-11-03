@@ -123,6 +123,12 @@ def profile_for_report(artifacts):
     return profile.path if profile and artifacts.selected == profile.names else None
 
 
+def run_order(artifacts):
+    """ The plugins of the selected artifacts. """
+    return [plugin for plugin in sorted(artifacts.loader.plugins, key=lambda item: item.category.upper())
+            if plugin.name in artifacts.selected]
+
+
 def load_artifacts():
     """ Load every artifact module once.
     Returns:

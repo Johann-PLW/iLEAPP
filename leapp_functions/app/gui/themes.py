@@ -22,7 +22,7 @@ ROLES = frozenset((
     "button_border",  # The border of a quiet button and of a button in a card
     "card_accent",  # The background of a card that sums up (report preview, detected), a shade apart from card_bg
     "card_bg",  # The background of a card and of its labels
-    "header_bg",  # The header background color, identical in both themes, the border of an accent card
+    "header_bg",  # The header background color, identical in both themes, border of an accent card, progress bar
     "input_bg",  # The background of an input
     "line",  # The lines between the steps, an input's border, the fill of a button in a card
     "main_bg",  # The main window background color
@@ -123,6 +123,9 @@ def apply_styles(style, colors):
         style.configure(f"{name}.TButton", padding=(18, 3, 18, 4))
     style_check_box(style, colors)
     style_lists(style, colors)
+    style.configure("Run.Horizontal.TProgressbar", background=colors.header_bg, troughcolor=colors.line,
+                    bordercolor=colors.line, lightcolor=colors.header_bg, darkcolor=colors.header_bg,
+                    thickness=8)
 
 
 def style_lists(style, colors):

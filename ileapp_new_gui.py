@@ -8,6 +8,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
 
+import ileapp
 from leapp_functions import leapp
 from leapp_functions.app import artifact_list
 from leapp_functions.app.gui import images, themes, window_area
@@ -18,8 +19,11 @@ from leapp_functions.app.gui.artifacts import ArtifactsScreen
 from leapp_functions.app.gui.case import CaseScreen
 from leapp_functions.app.gui.custom_widgets import ScrollArea
 from leapp_functions.app.gui.review import ReviewScreen
+from leapp_functions.app.gui.run import RunControl, RunScreen
 from leapp_functions.app.gui.source import SourceScreen
 from leapp_functions.app.gui.status_bar import StatusBar
+from scripts.context import Context
+from scripts.version_info import check_runtime_dependencies
 
 MIN_SIZE = (900, 700)
 UNLOCK_POLL = 100
@@ -41,7 +45,17 @@ class PlaceholderScreen(tk.Frame):
 
 
 SCREENS = {"case": CaseScreen, "source": SourceScreen, "artifacts": ArtifactsScreen,
-           "review": ReviewScreen}
+           "review": ReviewScreen, "run": RunScreen}
+
+
+def crunch(request):
+    """ The parser. """
+    Context.set_keychain_path(request.secrets.get("keychain") or None)
+    return ileapp.crunch_artifacts(request.plugins, request.detected.kind, request.input_path,
+                                   request.out_params, True, request.loader, request.case, "UTC",
+                                   request.profile, None, request.backup_keys,
+                                   image_password=request.image_keys, found_members=request.found,
+                                   hash_files=request.hash_files)
 
 
 class MainWindow(tk.Tk):
@@ -65,6 +79,7 @@ class MainWindow(tk.Tk):
         if sys.platform == "darwin":
             # On macOS: Settings item in the application menu and ⌘,
             self.createcommand("::tk::mac::ShowPreferences", self.open_settings)
+            self.createcommand("::tk::mac::Quit", self.close)
         else:
             # Other platforms: Ctrl,
             self.bind_all("<Control-comma>", lambda _event: self.open_settings())
@@ -80,8 +95,11 @@ class MainWindow(tk.Tk):
         except tk.TclError:
             pass
 
+        self.protocol("WM_DELETE_WINDOW", self.close)
+
         self.widgets = {}
         self.unlock_watch = None
+        self.run_control = RunControl(self, crunch)
 
         self.build()
         self.fix_size()
@@ -195,7 +213,7 @@ class MainWindow(tk.Tk):
     def go(self, step):
         """ Navigate to a step when the current application state allows it. """
         state = self.app_state
-        if step == "run" and state.run_status != "running":
+        if step == "run" and state.run_status == "idle":
             step = "review"
         if state.can_go(step):
             state.left.add(state.step)
@@ -214,14 +232,22 @@ class MainWindow(tk.Tk):
         state = self.app_state
         if state.step in ("case", "source", "artifacts"):
             self.go(state.neighbour(1))
-        elif state.step == "results":
-            # A new run: what was chosen is kept
-            state.run_status = "idle"
-            self.go("case")
+        elif state.step == "review":
+            self.run_control.start()
+        elif state.step == "run":
+            self.go("results")
         else:
-            # Starting and stopping a run need the engine, which is not connected yet
-            messagebox.showinfo("Not available yet", "The engine is not connected yet.",
-                                parent=self)
+            self.run_control.new_run()
+
+    def close(self):
+        """ The window's close button. Closing during a run stops it where it is. """
+        if self.app_state.run_status == "running" and not messagebox.askokcancel(
+                "Processing still running",
+                "A run is still in progress.\n\nClosing now stops it where it is. The report and "
+                "the LAVA project will be incomplete, and temporary files may be left behind.\n\n"
+                "Close anyway?", icon=messagebox.WARNING, default=messagebox.CANCEL, parent=self):
+            return
+        self.destroy()
 
     def watch_unlock(self):
         """ Follow the sequence that opens the source, whatever the screen on show. """
@@ -229,10 +255,11 @@ class MainWindow(tk.Tk):
         self.unlock_watch = self.after(UNLOCK_POLL, self.watch_unlock)
 
     def destroy(self):
-        """ Stop following the sequence before the window goes. """
+        """ Stop following the sequence and the run before the window goes. """
         if self.unlock_watch is not None:
             self.after_cancel(self.unlock_watch)
             self.unlock_watch = None
+        self.run_control.stop_watching()
         super().destroy()
 
     def refresh_steps(self):
@@ -253,4 +280,5 @@ class MainWindow(tk.Tk):
 
 
 if __name__ == "__main__":
+    check_runtime_dependencies()
     MainWindow().mainloop()

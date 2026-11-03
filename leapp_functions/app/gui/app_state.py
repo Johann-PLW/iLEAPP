@@ -53,7 +53,7 @@ class AppState:
         self.run = SimpleNamespace(source=tk.StringVar(), output=tk.StringVar(), selection=[],
                                    folder_name=tk.StringVar(),
                                    single_file=tk.BooleanVar(), hash_files=tk.BooleanVar(),
-                                   detected=None, unlock=None,
+                                   detected=None, unlock=None, worker=None,
                                    secrets={field["name"]: tk.StringVar()
                                             for field in (SECRETS.fields if SECRETS else ())})
         self.artifacts = SimpleNamespace(loader=None, listed=[], selected=set(), search="")
@@ -217,15 +217,16 @@ class AppState:
         """
         Whether the user may move to a step, given by its key.
         Case and Source are always open. Artifacts and Run need what missing_for() lists, and
-        Results a run that has taken place. While a run is on, nothing else can be reached.
+        Results a run that has taken place. Once a run has started, only its screens can be
+        reached: a second run in the same process would inherit what the first one has left.
         """
         if self.run_status == "running":
             return step == "run"
+        if self.run_status == "finished":
+            return step in ("run", "results")
         if step in ("artifacts", "review", "run"):
             return not self.missing_for(step)
-        if step == "results":
-            return self.run_status == "finished"
-        return True
+        return step != "results"
 
     def completed(self):
         """ The steps done, shown with a tick.

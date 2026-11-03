@@ -24,6 +24,11 @@ TEXTS = {
             "Stop"),
     "results": ("Run finished", "The report opens in the default browser", "New run"),
 }
+# The Run screen once the run has ended, by outcome
+RUN_OVER = {
+    "done": ("Run finished", "The report is in the output folder", "See the results"),
+    "failed": ("Run failed", "See the log", "See the results"),
+}
 
 
 class StatusBar(tk.Frame):
@@ -62,6 +67,9 @@ class StatusBar(tk.Frame):
         """ Show the state: the texts of the screen, and which buttons can be used. """
         colors, state = self.colors, self.app.app_state
         title, subtitle, next_text = TEXTS[state.step]
+        running = state.step == "run" and state.run_status == "running"
+        if state.step == "run" and not running:
+            title, subtitle, next_text = RUN_OVER[state.run.worker.shown.outcome]
         if state.step == "artifacts":
             artifacts = state.artifacts
             subtitle = f"{len(artifacts.selected)} of {len(artifacts.listed)} artifacts selected"
@@ -81,10 +89,11 @@ class StatusBar(tk.Frame):
 
         # Only one of the two is shown. grid_remove() hides a widget and keeps where it was
         # placed, which grid() brings back.
-        if state.step == "run":
+        if running:
             self.next_button.grid_remove()
             self.stop_button.grid()
             self.stop_button.set_text(next_text)
+            self.stop_button.set_enabled(False)
         else:
             self.stop_button.grid_remove()
             self.next_button.grid()
