@@ -173,10 +173,9 @@ class ScrollArea(tk.Frame):
     """ The room for a screen. When it is smaller than what the screen asks, the screen is cut and
     a scroll bar appears. """
 
-    def __init__(self, parent, app, on_asked):
+    def __init__(self, parent, app):
         colors = app.colors
         super().__init__(parent, bg=colors.main_bg)
-        self.on_asked = on_asked
         self.asked = (0, 0)
         self.offset = 0
         self.rowconfigure(0, weight=1)
@@ -216,7 +215,6 @@ class ScrollArea(tk.Frame):
         if asked != self.asked:
             self.asked = asked
             self.view.configure(width=asked[0], height=asked[1])
-            self.on_asked()
         self.place_content()
 
     def screen_height(self):
@@ -333,7 +331,7 @@ class LabeledEntry(tk.Frame):
                             highlightcolor=colors.line)
         self.box.grid(row=1, column=0, sticky="ew")
         self.box.columnconfigure(0, weight=1)
-        self.entry = tk.Entry(self.box, width=1, textvariable=field.variable, font=font, bg=colors.input_bg,
+        self.entry = tk.Entry(self.box, textvariable=field.variable, font=font, bg=colors.input_bg,
                               fg=colors.text_primary, insertbackground=colors.text_primary, relief="flat",
                               borderwidth=0, highlightthickness=0)
         self.entry.grid(row=0, column=0, sticky="ew", padx=ENTRY_PADX, ipady=ENTRY_PADY)

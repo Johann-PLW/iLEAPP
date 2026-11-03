@@ -194,6 +194,7 @@ class OutputCard(tk.Frame):
                  fg=app.colors.text_secondary, font=themes.sans(10)).grid(row=0, column=0, padx=(0, 8))
         name = LabeledEntry(name_line, app, Field("", run.folder_name))
         name.grid(row=0, column=1, sticky="ew")
+        name.entry.configure(width=8)
         # Characters a folder name cannot hold are refused as they are typed
         name.entry.configure(validate="key", validatecommand=(
             self.register(lambda proposed: sanitize_file_name(proposed) == proposed), "%P"))

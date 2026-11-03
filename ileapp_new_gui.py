@@ -106,7 +106,8 @@ class MainWindow(tk.Tk):
         self.widgets["scroll"].reveal(event)
 
     def fix_size(self):
-        """ Give the window the same size for every screen. """
+        """ Give the window the width its first screen asks for, within the display. It then keeps
+        its size on every screen, unless the user changes it. """
         self.update_idletasks()
         width = min(max(self.winfo_reqwidth(), MIN_SIZE[0]), self.screen_area[2])
         height = min(MIN_SIZE[1], self.screen_area[3])
@@ -163,7 +164,7 @@ class MainWindow(tk.Tk):
         self.widgets["steps"] = Steps(body, self)
         self.widgets["steps"].grid(row=0, column=0, sticky="ew", padx=(0, MARGIN), pady=(0, 24))
 
-        self.widgets["scroll"] = ScrollArea(body, self, self.fit_screen)
+        self.widgets["scroll"] = ScrollArea(body, self)
         self.widgets["scroll"].grid(row=1, column=0, sticky="nsew")
 
         self.show_screen()
@@ -180,15 +181,6 @@ class MainWindow(tk.Tk):
         screen = SCREENS[step](self.widgets["scroll"].content, self)
         self.widgets["screen"] = screen
         self.widgets["scroll"].show(screen)
-        self.fit_screen()
-
-    def fit_screen(self):
-        """ The window keeps its size on every screen: what does not fit in its height scrolls. """
-        self.update_idletasks()
-        width, height = self.winfo_width(), self.winfo_height()
-        if self.winfo_reqwidth() > width:
-            width = max(width, min(self.winfo_reqwidth(), self.screen_area[2]))
-        window_area.place(self, self.screen_area, width, height)
 
     def go(self, step):
         """ Navigate to a step when the current application state allows it. """
