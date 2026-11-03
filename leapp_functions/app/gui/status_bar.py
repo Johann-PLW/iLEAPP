@@ -76,8 +76,10 @@ class StatusBar(tk.Frame):
             title, subtitle, next_text = STOPPING
         elif state.step == "run" and not running:
             title, subtitle, next_text = RUN_OVER[state.run.worker.shown.outcome]
+        elif state.step == "results" and state.run.worker.shown.outcome != "done":
+            title, subtitle, _next = RUN_OVER[state.run.worker.shown.outcome]
         elif state.step == "results":
-            title = RUN_OVER[state.run.worker.shown.outcome][0]
+            title = RUN_OVER["done"][0]
         if state.step == "artifacts":
             artifacts = state.artifacts
             subtitle = f"{len(artifacts.selected)} of {len(artifacts.listed)} artifacts selected"

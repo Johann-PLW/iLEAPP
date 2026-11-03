@@ -596,6 +596,7 @@ def crunch_artifacts(
     try:
         # Now ready to run
         plugins[:] = version_readers_first(plugins)
+        selected_count = len(plugins)
         # add last_build at the start except for iTunes backups
         if extracttype != 'itunes':
             plugins.insert(0, loader["last_build"])
@@ -665,7 +666,8 @@ def crunch_artifacts(
             if GuiWindow.stop_requested:
                 GuiWindow.stopped = True
                 not_run = plugins[plugin_number - 1:]
-                stopped_note = f'Stopped by the user: {len(not_run)} of {len(plugins)} artifacts were not run.'
+                stopped_note = (f'Stopped by the user: {min(len(not_run), selected_count)} of '
+                                f'{selected_count} artifacts were not run.')
                 logfunc(f'\n{stopped_note}')
                 for left in not_run:
                     lava_add_module(left.module_name, "Not run", 0, left.name)
@@ -805,6 +807,7 @@ def crunch_artifacts(
         run_time_secs =  end_wall - start_wall
         run_time_HMS = strftime('%H:%M:%S', gmtime(run_time_secs))
         logfunc("Run time (wall clock) = {}".format(run_time_HMS))
+        GuiWindow.run_time = run_time_HMS
 
         # Filtered on the rounded value so the list holds exactly what the per-artifact
         # lines showed as 1.0s or more, with no artifact visible above the cut but missing here.

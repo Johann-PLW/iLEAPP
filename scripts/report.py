@@ -260,7 +260,7 @@ def create_index_html(reportfolderbase, time_in_secs, time_hms, extraction_type,
         ['Extraction location', image_input_path],
         ['Extraction type', extraction_type],
         ['Report directory', reportfolderbase],
-        ['Processing time', f'{time_hms} (Total {time_in_secs} seconds)']
+        ['Run time (wall clock)', f'{time_hms} (Total {time_in_secs} seconds)']
     ]
 
     tab1_content = generate_key_val_table_without_headings('', case_list, agency_logo_mimetype, agency_logo_b64)

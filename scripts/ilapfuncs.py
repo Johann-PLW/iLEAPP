@@ -147,6 +147,8 @@ class GuiWindow:
     # thread cannot be interrupted safely. stopped says that it did stop, with artifacts left.
     stop_requested = False
     stopped = False
+    # The wall clock time crunch_artifacts logs and reports, for the GUI to show the same one
+    run_time = ''
 
     @staticmethod
     def end_worker_run():
@@ -158,6 +160,7 @@ class GuiWindow:
         '''
         GuiWindow.message_queue = None
         GuiWindow.stop_requested = GuiWindow.stopped = False
+        GuiWindow.run_time = ''
         sys.stdout.write = _console_write
 
     @staticmethod

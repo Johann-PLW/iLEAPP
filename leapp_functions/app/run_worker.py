@@ -9,8 +9,10 @@ import traceback
 from types import SimpleNamespace
 
 from leapp_functions import leapp
-from leapp_functions.app import history, input_type
+from leapp_functions.app import artifact_list, history, input_type
 from leapp_functions.app.output import resolve_output_folder_name, validate_output_folder_available
+from leapp_functions.lava_launcher import find_lava_launcher
+from scripts import lavafuncs
 from scripts.context import Context
 from scripts.ilapfuncs import GuiWindow, OutputParameters, is_platform_windows, logfunc
 from scripts.lavafuncs import initialize_lava, lava_finalize_output, lava_json_name
@@ -29,6 +31,28 @@ def short_path(path):
     return path[4:] if path.startswith("\\\\?\\") else path
 
 
+def run_summary(modules, plugins):
+    """ What a run has found for the artifacts selected.
+    Args:
+        modules (list of dict): the modules of the LAVA manifest, one per artifact.
+        plugins (list of PluginSpec): the artifacts of the run, for their titles.
+    Returns:
+        SimpleNamespace: with_files, without_files, errors (titles), and the run time.
+    """
+    selected = [module for module in modules
+                if not artifact_list.is_hidden(module.get("artifact_name", ""))]
+    titles = {plugin.name: plugin.artifact_info.get("name", plugin.name) for plugin in plugins}
+
+    def having(status):
+        return [module for module in selected if module["module_status"] == status]
+
+    errors = [titles.get(module.get("artifact_name"), module["module_name"])
+              for module in having("Error")]
+    return SimpleNamespace(with_files=len(having("Complete")),
+                           without_files=len(having("No files found")),
+                           errors=sorted(errors, key=str.upper), run_time=GuiWindow.run_time)
+
+
 class RunWorker:
     """ One run. The worker thread only reports on a queue, which the window reads with poll(). """
 
@@ -41,8 +65,9 @@ class RunWorker:
         self.request = request
         self.crunch = crunch
         self.messages = GuiWindow.message_queue = queue.Queue()
-        self.shown = SimpleNamespace(log=[], done=0, outcome=None, detail="", folder="",
-                                     log_file="", stopping=False)
+        self.shown = SimpleNamespace(log=[], done=0, total=len(request.plugins), outcome=None,
+                                     detail="", folder="",
+                                     log_file="", stopping=False, lava_launcher=None, summary=None)
         threading.Thread(target=self.work, daemon=True).start()
 
     def stop(self):
@@ -101,9 +126,11 @@ class RunWorker:
         successful = self.crunch(request)
         lava_finalize_output(out_params.output_folder_base,
                              "Stopped" if GuiWindow.stopped else "Complete")
+        project = os.path.join(out_params.output_folder_base, lava_json_name)
         if successful and not GuiWindow.stopped:
-            history.record_recent_run(leapp.name.lower(), leapp.version,
-                                      os.path.join(out_params.output_folder_base, lava_json_name))
+            history.record_recent_run(leapp.name.lower(), leapp.version, project)
+        self.shown.lava_launcher = find_lava_launcher(short_path(project))
+        self.shown.summary = run_summary(lavafuncs.lava_data["modules"], request.plugins)
         return successful
 
     def poll(self):
@@ -117,7 +144,7 @@ class RunWorker:
             if kind == "log":
                 shown.log.append(payload)
             elif kind == "progress":
-                shown.done = payload
+                shown.done = max(payload - (len(self.request.plugins) - shown.total), 0)
             else:
                 self.finish(kind, payload)
 

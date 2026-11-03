@@ -231,6 +231,7 @@ class AppState:
     def completed(self):
         """ The steps done, shown with a tick.
         The case data is optional: the step is done once the user has moved on from it.
+        A run that failed is not done, one the user stopped is.
         """
         done = set()
         if "case" in self.left or not self.case_is_empty():
@@ -239,4 +240,6 @@ class AppState:
             done.add("source")
         if "artifacts" in self.left and not self.missing_for("review"):
             done.add("artifacts")
+        if self.run_status == "finished" and self.run.worker.shown.outcome != "failed":
+            done.add("run")
         return done

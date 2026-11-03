@@ -151,9 +151,8 @@ class RunScreen(tk.Frame):
     def refresh(self):
         """ Show what the run has reported since the last call. """
         shown = self.worker.shown
-        total = len(self.worker.request.plugins)
-        self.progress_bar.configure(maximum=max(total, 1), value=shown.done)
-        self.count.configure(text=f"{shown.done:,} of {total:,} artifacts done")
+        self.progress_bar.configure(maximum=max(shown.total, 1), value=shown.done)
+        self.count.configure(text=f"{shown.done:,} of {shown.total:,} artifacts done")
         if self.written == len(shown.log):
             return
         following = self.log.yview()[1] >= 1

@@ -14,10 +14,11 @@ from leapp_functions.app import artifact_list
 from leapp_functions.app.gui import images, themes, window_area
 from leapp_functions.app.gui.app_state import AppState
 from leapp_functions.app.gui.header import Header
-from leapp_functions.app.gui.steps import STAGES, Steps
+from leapp_functions.app.gui.steps import Steps
 from leapp_functions.app.gui.artifacts import ArtifactsScreen
 from leapp_functions.app.gui.case import CaseScreen
 from leapp_functions.app.gui.custom_widgets import ScrollArea
+from leapp_functions.app.gui.results import ResultsScreen
 from leapp_functions.app.gui.review import ReviewScreen
 from leapp_functions.app.gui.run import RunControl, RunScreen
 from leapp_functions.app.gui.source import SourceScreen
@@ -28,24 +29,8 @@ from scripts.version_info import check_runtime_dependencies
 MIN_SIZE = (900, 700)
 UNLOCK_POLL = 100
 
-TITLES = {key: title for key, title, _icon in STAGES} | {"review": "Review"}
-
-
-class PlaceholderScreen(tk.Frame):
-    """ An empty screen with its title, and a line that says it is not built yet. """
-
-    def __init__(self, parent, app):
-        super().__init__(parent, bg=app.colors.main_bg)
-        texts = tk.Frame(self, bg=app.colors.main_bg)
-        texts.place(relx=0.5, rely=0.4, anchor="center")
-        tk.Label(texts, text=TITLES[app.app_state.step], bg=app.colors.main_bg,
-                 fg=app.colors.text_primary, font=themes.sans(28, "bold")).pack()
-        tk.Label(texts, text="This screen does not exist yet: work in progress", bg=app.colors.main_bg,
-                 fg=app.colors.text_secondary, font=themes.sans(14)).pack(pady=(6, 0))
-
-
 SCREENS = {"case": CaseScreen, "source": SourceScreen, "artifacts": ArtifactsScreen,
-           "review": ReviewScreen, "run": RunScreen}
+           "review": ReviewScreen, "run": RunScreen, "results": ResultsScreen}
 
 
 def crunch(request):
@@ -192,7 +177,7 @@ class MainWindow(tk.Tk):
         if old is not None:
             old.destroy()
         step = self.app_state.step
-        screen = SCREENS.get(step, PlaceholderScreen)(self.widgets["scroll"].content, self)
+        screen = SCREENS[step](self.widgets["scroll"].content, self)
         self.widgets["screen"] = screen
         self.widgets["scroll"].show(screen)
         self.fit_screen()
