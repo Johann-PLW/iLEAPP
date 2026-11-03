@@ -14,8 +14,10 @@ TOOLTIP_DELAY = 500
 TOOLTIP_WIDTH = 520
 ENTRY_PADX = 12
 ENTRY_PADY = 4
-SIDE_WIDTH = 300
+MAIN_WIDTH = 640
+SIDE_WIDTH = 320
 GAP = 14
+MARGIN = 16
 MARK_SIZE = 16
 WHEEL_STEP = 24
 WHEEL_NOTCH = 1 if sys.platform == "darwin" and tk.TkVersion < 8.7 else 120
@@ -155,7 +157,7 @@ class Card(tk.Frame):
 def two_columns(screen, app):
     """ Lay a screen out in a main column on the left and a side column on the right.
     Returns the frame of each, where the screen builds its widgets. """
-    screen.columnconfigure(0, weight=2, uniform="column")
+    screen.columnconfigure(0, weight=2, uniform="column", minsize=MAIN_WIDTH)
     screen.columnconfigure(1, weight=1, uniform="column", minsize=SIDE_WIDTH)
 
     main = tk.Frame(screen, bg=app.colors.main_bg)
@@ -169,8 +171,7 @@ def two_columns(screen, app):
 
 class ScrollArea(tk.Frame):
     """ The room for a screen. When it is smaller than what the screen asks, the screen is cut and
-    a scroll bar appears.
-    """
+    a scroll bar appears. """
 
     def __init__(self, parent, app, on_asked):
         colors = app.colors
@@ -180,6 +181,7 @@ class ScrollArea(tk.Frame):
         self.offset = 0
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
+        self.columnconfigure(1, minsize=MARGIN)
 
         self.view = tk.Frame(self, bg=colors.main_bg)
         self.view.grid(row=0, column=0, sticky="nsew")
@@ -190,7 +192,7 @@ class ScrollArea(tk.Frame):
 
         self.bar = ttk.Scrollbar(self, orient="vertical", style="Card.Vertical.TScrollbar",
                                  command=self.scroll)
-        self.bar.grid(row=0, column=1, sticky="ns", padx=(6, 0))
+        self.bar.grid(row=0, column=1, sticky="ns")
         self.bar.grid_remove()
 
         self.view.bind("<Configure>", self.view_changed)
@@ -331,7 +333,7 @@ class LabeledEntry(tk.Frame):
                             highlightcolor=colors.line)
         self.box.grid(row=1, column=0, sticky="ew")
         self.box.columnconfigure(0, weight=1)
-        self.entry = tk.Entry(self.box, textvariable=field.variable, font=font, bg=colors.input_bg,
+        self.entry = tk.Entry(self.box, width=1, textvariable=field.variable, font=font, bg=colors.input_bg,
                               fg=colors.text_primary, insertbackground=colors.text_primary, relief="flat",
                               borderwidth=0, highlightthickness=0)
         self.entry.grid(row=0, column=0, sticky="ew", padx=ENTRY_PADX, ipady=ENTRY_PADY)

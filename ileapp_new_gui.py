@@ -17,7 +17,7 @@ from leapp_functions.app.gui.header import Header
 from leapp_functions.app.gui.steps import Steps
 from leapp_functions.app.gui.artifacts import ArtifactsScreen
 from leapp_functions.app.gui.case import CaseScreen
-from leapp_functions.app.gui.custom_widgets import ScrollArea
+from leapp_functions.app.gui.custom_widgets import MARGIN, ScrollArea
 from leapp_functions.app.gui.results import ResultsScreen
 from leapp_functions.app.gui.review import ReviewScreen
 from leapp_functions.app.gui.run import RunControl, RunScreen
@@ -26,7 +26,7 @@ from leapp_functions.app.gui.status_bar import StatusBar
 from scripts.context import Context
 from scripts.version_info import check_runtime_dependencies
 
-MIN_SIZE = (900, 700)
+MIN_SIZE = (1000, 700)
 UNLOCK_POLL = 100
 
 SCREENS = {"case": CaseScreen, "source": SourceScreen, "artifacts": ArtifactsScreen,
@@ -53,7 +53,7 @@ class MainWindow(tk.Tk):
         self.icon = images.load("icon.png")
         self.iconphoto(True, self.icon)
         self.screen_area = window_area.measure(self)
-        self.minsize(MIN_SIZE[0], min(MIN_SIZE[1], self.screen_area[3]))
+        self.minsize(min(MIN_SIZE[0], self.screen_area[2]), min(MIN_SIZE[1], self.screen_area[3]))
 
         self.app_state = AppState(self.refresh_steps)
         self.app_state.artifacts = artifact_list.load_artifacts()
@@ -106,12 +106,12 @@ class MainWindow(tk.Tk):
         self.widgets["scroll"].reveal(event)
 
     def fix_size(self):
-        """ Give the window the size its first screen asks for """
+        """ Give the window the same size for every screen. """
         self.update_idletasks()
-        width = max(self.winfo_reqwidth(), MIN_SIZE[0])
-        height = max(self.winfo_reqheight(), MIN_SIZE[1])
-        window_area.place(self, self.screen_area, min(width, self.screen_area[2]),
-                          min(height, self.screen_area[3]))
+        width = min(max(self.winfo_reqwidth(), MIN_SIZE[0]), self.screen_area[2])
+        height = min(MIN_SIZE[1], self.screen_area[3])
+        self.geometry(f"{width}x{height}")
+        window_area.place(self, self.screen_area, width, height)
 
     def redraw(self):
         """ On macOS, a window opened from a terminal stays empty until it is clicked:
@@ -156,12 +156,12 @@ class MainWindow(tk.Tk):
         self.widgets["header"].pack(fill="x")
 
         body = self.widgets["body"] = tk.Frame(self, bg=self.colors.main_bg)
-        body.pack(fill="both", expand=True, padx=16, pady=(16, 8))
+        body.pack(fill="both", expand=True, padx=(MARGIN, 0), pady=(16, 8))
         body.columnconfigure(0, weight=1)
         body.rowconfigure(1, weight=1)
 
         self.widgets["steps"] = Steps(body, self)
-        self.widgets["steps"].grid(row=0, column=0, sticky="ew", pady=(0, 24))
+        self.widgets["steps"].grid(row=0, column=0, sticky="ew", padx=(0, MARGIN), pady=(0, 24))
 
         self.widgets["scroll"] = ScrollArea(body, self, self.fit_screen)
         self.widgets["scroll"].grid(row=1, column=0, sticky="nsew")
@@ -169,7 +169,7 @@ class MainWindow(tk.Tk):
         self.show_screen()
 
         self.widgets["status_bar"] = StatusBar(body, self)
-        self.widgets["status_bar"].grid(row=2, column=0, sticky="ew", pady=(16, 8))
+        self.widgets["status_bar"].grid(row=2, column=0, sticky="ew", padx=(0, MARGIN), pady=(16, 8))
 
     def show_screen(self):
         """ Build the screen of the step. What was typed is in the state, so it survives the screen being rebuilt. """
@@ -183,16 +183,11 @@ class MainWindow(tk.Tk):
         self.fit_screen()
 
     def fit_screen(self):
-        """ Make the window bigger when the screen on show needs more room than it has, within the
-        display: what still does not fit scrolls. It never gets smaller: a size the user gave it
-        is kept when it is enough. It moves if it would leave the display. """
+        """ The window keeps its size on every screen: what does not fit in its height scrolls. """
         self.update_idletasks()
-        _left, _top, room_width, room_height = self.screen_area
         width, height = self.winfo_width(), self.winfo_height()
         if self.winfo_reqwidth() > width:
-            width = max(width, min(self.winfo_reqwidth(), room_width))
-        if self.winfo_reqheight() > height:
-            height = max(height, min(self.winfo_reqheight(), room_height))
+            width = max(width, min(self.winfo_reqwidth(), self.screen_area[2]))
         window_area.place(self, self.screen_area, width, height)
 
     def go(self, step):
