@@ -143,6 +143,10 @@ class GuiWindow:
     # when it finishes. Tk is not thread-safe: while this is set, nothing below may touch a
     # widget, so progress and log lines are handed to the GUI's poller instead.
     message_queue = None
+    # stop_requested is set by the GUI: crunch_artifacts reads it before each artifact, as a
+    # thread cannot be interrupted safely. stopped says that it did stop, with artifacts left.
+    stop_requested = False
+    stopped = False
 
     @staticmethod
     def end_worker_run():
@@ -153,6 +157,7 @@ class GuiWindow:
         that does not go through logfunc raises AttributeError on a queue that is gone.
         '''
         GuiWindow.message_queue = None
+        GuiWindow.stop_requested = GuiWindow.stopped = False
         sys.stdout.write = _console_write
 
     @staticmethod

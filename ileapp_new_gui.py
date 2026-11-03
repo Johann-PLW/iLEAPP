@@ -234,6 +234,8 @@ class MainWindow(tk.Tk):
             self.go(state.neighbour(1))
         elif state.step == "review":
             self.run_control.start()
+        elif state.step == "run" and state.run_status == "running":
+            self.run_control.stop()
         elif state.step == "run":
             self.go("results")
         else:

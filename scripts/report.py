@@ -31,10 +31,11 @@ def get_tabler_icon_names():
 
 
 def generate_report(reportfolderbase, time_in_secs, time_hms, extraction_type, image_input_path,
-                    casedata, profile_filename, icons, lava_only):
+                    casedata, profile_filename, icons, lava_only, stopped_note=''):
     """
     Builds the full HTML report by assembling sidebar navigation from .temphtml artifact files,
     writing final .html pages, and generating the index.html summary page.
+    stopped_note says why the run left artifacts unparsed, when it did.
     """
 
     tabler_icon_names = get_tabler_icon_names()
@@ -134,7 +135,7 @@ def generate_report(reportfolderbase, time_in_secs, time_hms, extraction_type, i
 
     # Create index.html's page content
     create_index_html(reportfolderbase, time_in_secs, time_hms, extraction_type, image_input_path,
-                      nav_list_data, casedata, profile_filename, lava_only)
+                      nav_list_data, casedata, profile_filename, lava_only, stopped_note)
     elements_folder = os.path.join(reportfolderbase, '_HTML', '_elements')
     __location__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -226,12 +227,16 @@ def get_file_content(path):
 
 
 def create_index_html(reportfolderbase, time_in_secs, time_hms, extraction_type, image_input_path,
-                      nav_list_data, casedata, profile_filename, lava_only):
+                      nav_list_data, casedata, profile_filename, lava_only, stopped_note=''):
     '''Write out the index.html page to the report folder'''
     case_list = []
     agency_logo_mimetype = ''
     agency_logo_b64 = ''
     content = '<br />'
+    if stopped_note:
+        content += (f'<div class="note note-warning mb-4"><b>Incomplete report.</b> '
+                    f'{html.escape(stopped_note)} An artifact missing from this report may still '
+                    f'have data in the extraction.</div>')
     content += """
                    <div class="card bg-white" style="padding: 20px;">
                    <h2 class="card-title">Case Information</h2>

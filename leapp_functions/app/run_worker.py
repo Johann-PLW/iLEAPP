@@ -42,8 +42,13 @@ class RunWorker:
         self.crunch = crunch
         self.messages = GuiWindow.message_queue = queue.Queue()
         self.shown = SimpleNamespace(log=[], done=0, outcome=None, detail="", folder="",
-                                     log_file="")
+                                     log_file="", stopping=False)
         threading.Thread(target=self.work, daemon=True).start()
+
+    def stop(self):
+        """ Ask the run to stop once the artifact in progress has ended. """
+        GuiWindow.stop_requested = True
+        self.shown.stopping = True
 
     def refusal(self):
         """ Why the run must not start. """
@@ -94,8 +99,9 @@ class RunWorker:
         initialize_lava(input_text(request.input_path, request.found),
                         out_params.output_folder_base, request.detected.kind, request.profile)
         successful = self.crunch(request)
-        lava_finalize_output(out_params.output_folder_base)
-        if successful:
+        lava_finalize_output(out_params.output_folder_base,
+                             "Stopped" if GuiWindow.stopped else "Complete")
+        if successful and not GuiWindow.stopped:
             history.record_recent_run(leapp.name.lower(), leapp.version,
                                       os.path.join(out_params.output_folder_base, lava_json_name))
         return successful
@@ -117,12 +123,12 @@ class RunWorker:
 
     def finish(self, kind, payload):
         """ The worker has ended: "refused", "failed", or "done" with what the run returned. """
-        GuiWindow.end_worker_run()
         shown = self.shown
         if kind == "done":
-            shown.outcome = "done" if payload else "failed"
+            shown.outcome = ("stopped" if GuiWindow.stopped else "done") if payload else "failed"
         else:
             shown.outcome, shown.detail = kind, payload
+        GuiWindow.end_worker_run()
         if kind == "failed":
             logfunc("Processing failed with an unhandled error:")
             logfunc(payload)

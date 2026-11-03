@@ -20,15 +20,18 @@ TEXTS = {
     "artifacts": ("Choose what to parse", "", "Review and run"),
     "review": ("Ready to run", "The run takes place in the background: the window stays usable",
                "Start parsing"),
-    "run": ("Parsing in progress", "Stopping interrupts iLEAPP: the report will be incomplete",
-            "Stop"),
+    "run": ("Parsing in progress", "Stop ends the run after the artifact in progress: the report "
+            "will be incomplete", "Stop"),
     "results": ("Run finished", "The report opens in the default browser", "New run"),
 }
 # The Run screen once the run has ended, by outcome
 RUN_OVER = {
     "done": ("Run finished", "The report is in the output folder", "See the results"),
     "failed": ("Run failed", "See the log", "See the results"),
+    "stopped": ("Run stopped", "The report only holds the artifacts parsed before the stop",
+                "See the results"),
 }
+STOPPING = ("Stopping", "The artifact in progress finishes first, then the report is written", "Stop")
 
 
 class StatusBar(tk.Frame):
@@ -68,8 +71,13 @@ class StatusBar(tk.Frame):
         colors, state = self.colors, self.app.app_state
         title, subtitle, next_text = TEXTS[state.step]
         running = state.step == "run" and state.run_status == "running"
-        if state.step == "run" and not running:
+        stopping = running and state.run.worker.shown.stopping
+        if stopping:
+            title, subtitle, next_text = STOPPING
+        elif state.step == "run" and not running:
             title, subtitle, next_text = RUN_OVER[state.run.worker.shown.outcome]
+        elif state.step == "results":
+            title = RUN_OVER[state.run.worker.shown.outcome][0]
         if state.step == "artifacts":
             artifacts = state.artifacts
             subtitle = f"{len(artifacts.selected)} of {len(artifacts.listed)} artifacts selected"
@@ -93,7 +101,7 @@ class StatusBar(tk.Frame):
             self.next_button.grid_remove()
             self.stop_button.grid()
             self.stop_button.set_text(next_text)
-            self.stop_button.set_enabled(False)
+            self.stop_button.set_enabled(not stopping)
         else:
             self.stop_button.grid_remove()
             self.next_button.grid()

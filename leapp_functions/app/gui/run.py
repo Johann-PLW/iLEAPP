@@ -83,6 +83,19 @@ class RunControl:
                 message += f"\nLog file located at {shown.log_file}"
             messagebox.showerror("Error", message, parent=self.app)
 
+    def stop(self):
+        """ Ask the run to stop, once the user has confirmed. """
+        worker = self.app.app_state.run.worker
+        if messagebox.askokcancel(
+                "Stop the run",
+                "The run stops once the artifact in progress has ended, which can take a while, "
+                "and the report is then written.\n\nThe artifacts not yet parsed will be missing "
+                "from it, and the run cannot be resumed.\n\nStop the run?",
+                icon=messagebox.WARNING, default=messagebox.CANCEL, parent=self.app
+        ) and worker.shown.outcome is None:
+            worker.stop()
+            self.app.refresh_steps()
+
     def new_run(self):
         """ Start the program again, which keeps nothing of this run, and leave. """
         try:
