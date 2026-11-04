@@ -8,7 +8,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import messagebox, ttk
 
-import ileapp
+from leapp_functions.app.gui import quick_exit
 from leapp_functions import leapp
 from leapp_functions.app import artifact_list
 from leapp_functions.app.gui import images, themes, window_area
@@ -23,6 +23,7 @@ from leapp_functions.app.gui.review import ReviewScreen
 from leapp_functions.app.gui.run import RunControl, RunScreen
 from leapp_functions.app.gui.source import SourceScreen
 from leapp_functions.app.gui.status_bar import StatusBar
+import ileapp
 from scripts.context import Context
 from scripts.version_info import check_runtime_dependencies
 
@@ -170,10 +171,11 @@ class MainWindow(tk.Tk):
         self.show_screen()
 
         self.widgets["status_bar"] = StatusBar(body, self)
-        self.widgets["status_bar"].grid(row=2, column=0, sticky="ew", padx=(0, MARGIN), pady=(16, 8))
+        self.widgets["status_bar"].grid(row=2, column=0, sticky="ew", padx=(0, MARGIN),
+                                        pady=(16, 8))
 
     def show_screen(self):
-        """ Build the screen of the step. What was typed is in the state, so it survives the screen being rebuilt. """
+        """ Build the screen of the step. """
         old = self.widgets.pop("screen", None)
         if old is not None:
             old.destroy()
@@ -255,4 +257,7 @@ class MainWindow(tk.Tk):
 
 if __name__ == "__main__":
     check_runtime_dependencies()
-    MainWindow().mainloop()
+    main_window = MainWindow()
+    main_window.mainloop()
+    if main_window.app_state.run_status != "running":
+        quick_exit.window_closed()
