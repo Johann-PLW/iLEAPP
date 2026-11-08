@@ -19,7 +19,7 @@ from scripts.lavafuncs import lava_json_name
 KEY_WIDTH = 104
 ROW_GAP = 8
 BUTTON_GAP = 8
-BUTTONS_PER_LINE = 2
+BUTTONS_PER_LINE = 2  # until the width of the card is known
 REPORT_FILE = "index.html"
 TSV_FOLDER = "_TSV Exports"
 ERRORS_SHOWN = 6
@@ -104,8 +104,8 @@ class ErrorList(tk.Frame):
 
 
 class ResultButtons(tk.Frame):
-    """ Buttons of one size: side by side if the width of the card has room for them all,
-    otherwise two by line. They never make the card wider. """
+    """ Buttons centred as many side by side as the width of the card has room
+    for, the others on the next line, centred too. """
 
     def __init__(self, parent, app, background, actions):
         super().__init__(parent, bg=background)
@@ -120,23 +120,29 @@ class ResultButtons(tk.Frame):
 
     def fit(self, event):
         """ The width of the card is known, and by now the width of the buttons. """
-        count = len(self.buttons)
         width = max(button.winfo_reqwidth() for button in self.buttons)
-        room = count * width + (count - 1) * BUTTON_GAP <= event.width
-        self.arrange(count if room else BUTTONS_PER_LINE, width)
+        per_line = event.width // half_column(width) // 2
+        self.arrange(min(max(per_line, 1), len(self.buttons)), width)
 
     def arrange(self, per_line, width):
-        """ Put the buttons on their lines. """
+        """ Put the buttons on their lines, each line centred. """
         if (per_line, width) == self.layout:
             return
         self.layout = (per_line, width)
+        count = len(self.buttons)
         for index, button in enumerate(self.buttons):
-            row, column = divmod(index, per_line)
-            button.grid(row=row, column=column, sticky="ew", padx=(BUTTON_GAP if column else 0, 0),
-                        pady=(BUTTON_GAP if row else 0, 0))
-        for column in range(len(self.buttons)):
-            self.columnconfigure(column, minsize=0 if column >= per_line
-                                 else width + (BUTTON_GAP if column else 0))
+            row, place = divmod(index, per_line)
+            on_line = min(per_line, count - row * per_line)
+            button.grid(row=row, column=per_line - on_line + 2 * place, columnspan=2, sticky="ew",
+                        padx=BUTTON_GAP // 2, pady=(BUTTON_GAP if row else 0, 0))
+        for column in range(2 * count):
+            self.columnconfigure(column, minsize=half_column(width) if column < 2 * per_line
+                                 else 0)
+
+
+def half_column(width):
+    """ Half the room a button takes, gap included. """
+    return (width + BUTTON_GAP + 1) // 2
 
 
 class ResultsScreen(tk.Frame):
@@ -175,7 +181,7 @@ class ResultsScreen(tk.Frame):
             else ("Explore LAVA", self.explore_lava, True),
             ("Open TSV Folder", self.open_tsv_folder,
              bool(folder) and os.path.isdir(os.path.join(folder, TSV_FOLDER))),
-            ("Open output folder", self.open_folder, bool(folder)))).pack(anchor="w", pady=(14, 0))
+            ("Open output folder", self.open_folder, bool(folder)))).pack(pady=(14, 0))
 
     def build_rows(self, card):
         """ The lines of the summary, in the card. """
