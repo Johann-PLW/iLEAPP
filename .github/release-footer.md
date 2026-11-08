@@ -67,6 +67,15 @@ and compare it with the line in `SHA256SUMS.txt`, which is lower case.
 The build is made on Ubuntu 22.04, so it needs glibc 2.35 or newer and will not start on
 an older distribution.
 
+## Third-party licences
+
+iLEAPP's own code is MIT. To show HEIC images the packaged programs include heicreader, which is
+MIT and built from MIT and BSD-3-Clause code. The licence texts are in the `LICENSES` folder
+inside every download and in `LICENSES/THIRD-PARTY-NOTICES.md` in the repository.
+`LICENSES/bundled/` in every download holds the licence of each Python package the program
+carries and of each library it takes from the build machine, and its index names the ones under copyleft terms, such as simplekml (LGPL), with a
+link to their source.
+
 ## Code signing policy
 
 The [code signing policy](https://github.com/abrignoni/iLEAPP#code-signing-policy) covers

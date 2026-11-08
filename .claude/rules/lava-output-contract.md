@@ -18,15 +18,20 @@ Alongside `_HTML/`, `_TSV Exports/`, `_Timeline/`, `data/` and `media/`:
   `Agency Logo mimetype` plus `Agency Logo base64`). The LEAPP window and the CLI's case
   data file writer produce string values, but `-d` copies a hand-editable `.lcasedata`
   file's values unchanged, so a reader must not assume strings. It is empty when none
-  was given and absent from manifests written before it existed. The database carries
-  the same pairs in `_lava_case_data`, with every value passed through `str()`, but a
-  subset export keeps only the manifest copy, so LAVA reads the manifest.
+  was given and absent from manifests written before it existed. The manifest is the
+  only copy: LAVA, its subsets and its reports read it from there. (Source runs of main
+  from 4 November 2026, before the table was removed, also wrote a `_lava_case_data`
+  table. No release carries it and nothing reads it.)
 - **`_lava_artifacts.db`**: SQLite, one table per artifact, named from the sanitized
   artifact function name. Column names are sanitized snake_case of the headers, so
   `Kind (as stored)` becomes `kind_as_stored`. A header typed `('X', 'datetime')` becomes
   an INTEGER epoch column and one typed `('X', 'number')` a NUMERIC column, which LAVA
   sorts as numbers and shows with a popover of other forms (hexadecimal, binary, digit
-  grouping); everything else is TEXT. The database also carries bookkeeping
+  grouping). Headers typed `('X', 'latitude')` and `('X', 'longitude')` are NUMERIC too, and
+  LAVA shows them in degrees, minutes and seconds with the hemisphere. A header typed
+  `('X', 'hash')` (hex digests and UUIDs) stays TEXT, and LAVA sorts it as text ignoring
+  case instead of with UINT, which would compare its digit runs as numbers; everything
+  else is TEXT. The database also carries bookkeeping
   tables recording which glob matched which file.
 
 Writing is done by `scripts/lavafuncs.py`, which is meant to stay identical across the five

@@ -55,6 +55,7 @@ import sys
 import tempfile
 import urllib.request
 from pathlib import Path
+import importlib.util
 
 ROOT = Path(__file__).resolve().parent.parent
 PACKAGING = ROOT / "packaging"
@@ -70,6 +71,18 @@ DMG_BACKGROUND = PACKAGING / "dmg_background.png"
 BIN = ROOT / "bin"
 DIST = ROOT / "dist"
 BUILD = ROOT / "build"
+
+
+def _load_licenses():
+    """packaging/licenses.py, loaded by path: the spec loads this file the same way, so
+    packaging/ is not on sys.path."""
+    spec = importlib.util.spec_from_file_location("leapp_licenses", PACKAGING / "licenses.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+licenses = _load_licenses()
 APP = "iLEAPP"
 EXE = "ileapp"
 # PyInstaller's default, named so the smoke test and the spec agree on where the
@@ -108,7 +121,7 @@ FIXED_HIDDEN_IMPORTS = (
     "nska_deserialize",
     "pandas",
     "pgpy",
-    "pillow_heif",
+    "heicreader",
     "typedstream",
     "xml.etree.ElementTree",
 )
@@ -197,6 +210,13 @@ def bundled_bin_dir() -> Path:
     return DIST / APP / CONTENTS / "bin"
 
 
+def bundled_data_dir() -> Path:
+    """Where a one-folder build keeps its data files: sys._MEIPASS at run time."""
+    if sys.platform == "darwin":
+        return macos_app() / "Contents" / "Resources"
+    return DIST / APP / CONTENTS
+
+
 def run(cmd: list[str], **kwargs) -> None:
     print("==>", " ".join(str(part) for part in cmd), flush=True)
     result = subprocess.run(cmd, check=False, **kwargs)
@@ -257,6 +277,8 @@ def bundle_datas() -> list[tuple[str, str]]:
     entries = []
     for tree in DATA_TREES:
         entries += _tree(ROOT / tree, tree)
+    # The third-party licence texts, in LICENSES/ inside every build (packaging/licenses.py).
+    entries += licenses.bundle_datas()
     if _unifiedlog_binary() is not None:
         for name, remedy in (
                 (UNIFIEDLOG_LICENSE, "Re-run admin/scripts/fetch_unifiedlog_iterator.py."),
@@ -328,6 +350,8 @@ def build_exe(onefile: bool, clean_first: bool) -> Path:
     refuse_collision(onefile)
     run([sys.executable, "-m", "pip", "install", "-q", "--disable-pip-version-check",
          "-r", str(ROOT / "requirements.txt"), "-r", str(BUILD_REQUIREMENTS)])
+    # heicreader is pinned by requirements.txt and LICENSES/ carries its licence texts.
+    licenses.check()
     env = dict(os.environ, ILEAPP_ONEFILE="1" if onefile else "0")
     run([sys.executable, "-m", "PyInstaller", str(SPEC), "--noconfirm",
          "--distpath", str(DIST), "--workpath", str(BUILD)], env=env)
@@ -335,6 +359,11 @@ def build_exe(onefile: bool, clean_first: bool) -> Path:
         assert_artifact(DIST / APP / EXE, "one-folder executable")
     out = output(onefile)
     assert_artifact(out, "executable")
+    # The program is MIT: refuse to ship a file named like a GPL video codec, whatever brought it in.
+    if onefile:
+        licenses.refuse_gpl_codecs(_onefile_members(out))
+    else:
+        licenses.refuse_gpl_codecs(p.name for p in DIST.rglob("*") if p.is_file())
     return out
 
 
@@ -676,6 +705,28 @@ def smoke(onefile: bool) -> int:
               f"the Unified Log parser is bundled and runs ({bundled})", result)
         check((folder / UNIFIEDLOG_LICENSE).is_file() and (folder / UNIFIEDLOG_NOTICES).is_file(),
               "the parser's licence and third-party notices are beside it")
+
+    # The third-party licence texts ship in every build, LICENSES/ beside the bundle's data.
+    wanted = licenses.bundled_names()
+    if onefile:
+        held = _onefile_members(exe)
+        missing = [name for name in wanted if name not in held]
+    else:
+        missing = [name for name in wanted if not (bundled_data_dir() / name).is_file()]
+    detail = f" (missing: {', '.join(missing)})" if missing else ""
+    check(not missing, f"the third-party licences are inside the build{detail}")
+
+    # The HEIC helper ships beside heicreader's package, where heicreader looks for it.
+    helper = f"heicreader/bin/{exe_name('heicreader')}"
+    if onefile:
+        check(helper in _onefile_members(exe), f"the HEIC helper is inside the executable ({helper})")
+    else:
+        bundled = (macos_app() / "Contents" / "Frameworks" if sys.platform == "darwin"
+                   else DIST / APP / CONTENTS) / helper
+        result = _run_built([str(bundled), "version"]) if bundled.is_file() else None
+        check(result is not None and result.returncode == 0
+              and result.stdout.strip() == licenses.pinned_version(),
+              f"the HEIC helper is bundled and runs ({bundled})", result)
 
     # The window is built with Tk, so on Linux it needs a display, which CI gets from
     # xvfb-run. Skipping it without one would pass a build nobody has tested.

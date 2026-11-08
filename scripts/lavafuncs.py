@@ -32,7 +32,7 @@ import json
 import sqlite3
 import sys
 import os
-from platform import platform
+from platform import machine, platform
 from collections import OrderedDict
 import math
 import re
@@ -102,16 +102,19 @@ def get_sql_type(python_type):
     Args:
         python_type (str): The header type as a string (e.g., 'datetime', 'date', 'number').
     Returns:
-        str: 'INTEGER' for datetime, 'NUMERIC' for number, and 'TEXT' for date and every
-             other type. A NUMERIC column stores values that read as numbers as INTEGER or
-             REAL, so LAVA sorts them as numbers, and keeps anything else as text. It also
-             rewrites the written form of what it converts ('007' is stored as 7).
+        str: 'INTEGER' for datetime, 'NUMERIC' for number, latitude and longitude, and
+             'TEXT' for date and every other type. A NUMERIC column stores values that read
+             as numbers as INTEGER or REAL, so LAVA sorts them as numbers, and keeps anything
+             else as text. It also rewrites the written form of what it converts ('007' is
+             stored as 7, '37.7700' as 37.77).
     """
 
     type_map = {
         'datetime': 'INTEGER',
         'date': 'TEXT',
         'number': 'NUMERIC',
+        'latitude': 'NUMERIC',
+        'longitude': 'NUMERIC',
     }
     return type_map.get(python_type, 'TEXT')
 
@@ -318,6 +321,10 @@ def initialize_lava(input_path, output_path, input_type, profile_filename=None, 
                            else "CLI"),
             "package": "Source code" if not getattr(sys, 'frozen', False) else "Binary",
             "OS": platform(),
+            # The machine the Python process reports. platform() leaves it out on
+            # Windows. Under emulation (Rosetta, x64 on Windows ARM64) it can be the
+            # emulated architecture, not the host's.
+            "architecture": machine(),
             "start_timestamp": int(datetime.datetime.now(datetime.timezone.utc).timestamp())
         },
         "param_input": input_path,
@@ -340,14 +347,6 @@ def initialize_lava(input_path, output_path, input_type, profile_filename=None, 
     _invalid_media_refs_logged.clear()
 
     cursor = lava_db.cursor()
-    cursor.execute('''CREATE TABLE _lava_case_data (
-                        key TEXT PRIMARY KEY,
-                        value TEXT)''')
-    if case_data:
-        cursor.executemany(
-            'INSERT INTO _lava_case_data ("key", "value") VALUES (?, ?)',
-            [(str(k), str(v) if v is not None else '') for k, v in case_data.items()]
-        )
     cursor.execute('''CREATE TABLE _artifact_search_patterns (
                         id INTEGER PRIMARY KEY,
                         module_name TEXT NOT NULL,

@@ -62,6 +62,7 @@ from functools import wraps
 # LEAPP version unique imports
 import binascii
 from PIL import Image
+import heicreader
 
 from scripts.html_safe import esc, safe_local_path
 from scripts.lavafuncs import lava_process_artifact, lava_insert_sqlite_data, lava_iter_artifact_rows, \
@@ -347,6 +348,41 @@ def _resolve_media_source(source_path):
         return extraction_path, file_info, file_info.source_path
     return extraction_path, None, Context.get_relative_path(source_path)
 
+# LAVA 2026.1.0 and 2026.1.1 show a media item of type image/heic as "This file could not be
+# shown" (media.cannot_display in RenderMedia.jsx): its viewer cannot decode HEIC.
+_HEIC_MIME_TYPES = ('image/heic', 'image/heif')
+_heic_unavailable_logged = False
+
+
+def _heic_to_viewable(source):
+    '''
+    Decode a HEIC or HEIF image with heicreader and encode it as JPEG, or as PNG when it has
+    transparency, which JPEG cannot hold.
+    Args:
+        source: A file path, or the image's bytes.
+    Returns:
+        (bytes, mime type, extension), or None when the image could not be decoded.
+    '''
+    global _heic_unavailable_logged  # pylint: disable=global-statement
+    try:
+        image = heicreader.to_pil(source)
+    except heicreader.Unavailable as ex:
+        # Said once per run, not once per image: every HEIC would fail the same way.
+        if not _heic_unavailable_logged:
+            logfunc(f'HEIC images are attached as they are: heicreader is not available ({ex})')
+            _heic_unavailable_logged = True
+        return None
+    except (heicreader.HeicReaderError, OSError, ValueError) as ex:
+        logfunc(f'HEIC image could not be converted for display, the original is attached instead: {ex}')
+        return None
+    buffer = io.BytesIO()
+    if image.mode == 'RGBA':
+        image.save(buffer, format='PNG')
+        return buffer.getvalue(), 'image/png', '.png'
+    image.save(buffer, format='JPEG', quality=90)
+    return buffer.getvalue(), 'image/jpeg', '.jpg'
+
+
 def _check_in_media(media_id, source_path, is_embedded, name, media_data=None, converted_file_path=None, force_type=None,
                     force_extension=None, force_creation_date=None, force_modification_date=None):
     '''
@@ -418,9 +454,22 @@ def _check_in_media(media_id, source_path, is_embedded, name, media_data=None, c
             else:
                 media_item.updated_at = 0
 
+        # An image sniffed as image/heic, or forced by the caller as image/heic or image/heif,
+        # is attached as a JPEG copy (PNG when it has transparency) so the report can show it.
+        # The original stays in the evidence copy, and the media's source path still names it.
+        # A caller that passed its own converted file, or forced another type, is left as it
+        # asked.
+        converted_data = None
+        if not converted_file_path and media_item.mimetype in _HEIC_MIME_TYPES:
+            converted = _heic_to_viewable(media_data if is_embedded else str(file_to_copy))
+            if converted is not None:
+                converted_data, media_item.mimetype, suffix = converted
+
         # 1. Create the canonical media file
         canonical_media_path = Path(output_params.media_folder).joinpath(media_id).with_suffix(suffix)
-        if is_embedded:
+        if converted_data is not None:
+            canonical_media_path.write_bytes(converted_data)
+        elif is_embedded:
             canonical_media_path.write_bytes(media_data)
         else:
             try:
