@@ -18,8 +18,8 @@ from scripts.lavafuncs import lava_json_name
 
 KEY_WIDTH = 104
 ROW_GAP = 8
-BUTTON_GAP = 8
-BUTTONS_PER_LINE = 2  # until the width of the card is known
+OPEN_TEXT = "Open ▾"
+OPEN_GAP = 28
 REPORT_FILE = "index.html"
 ERRORS_SHOWN = 6
 
@@ -102,46 +102,26 @@ class ErrorList(tk.Frame):
             self.scrollbar.grid_remove()
 
 
-class ResultButtons(tk.Frame):
-    """ Buttons centred as many side by side as the width of the card has room
-    for, the others on the next line, centred too. """
+class OpenMenu(tk.Frame):
+    """ One button whose menu opens what the run has written. """
 
     def __init__(self, parent, app, background, actions):
         super().__init__(parent, bg=background)
-        self.buttons = []
+        self.button = OutlineButton(self, app, style="in_card", text=OPEN_TEXT,
+                                    command=self.show_menu)
+        self.button.pack()
+        self.menu = tk.Menu(self, tearoff=0)
         for text, command, enabled in actions:
-            button = OutlineButton(self, app, style="in_card", text=text, command=command)
-            button.set_enabled(enabled)
-            self.buttons.append(button)
-        self.layout = None
-        self.arrange(BUTTONS_PER_LINE, 0)
-        parent.bind("<Configure>", self.fit, add="+")
+            self.menu.add_command(label=text, command=command,
+                                  state="normal" if enabled else "disabled")
 
-    def fit(self, event):
-        """ The width of the card is known, and by now the width of the buttons. """
-        width = max(button.winfo_reqwidth() for button in self.buttons)
-        per_line = event.width // half_column(width) // 2
-        self.arrange(min(max(per_line, 1), len(self.buttons)), width)
-
-    def arrange(self, per_line, width):
-        """ Put the buttons on their lines, each line centred. """
-        if (per_line, width) == self.layout:
-            return
-        self.layout = (per_line, width)
-        count = len(self.buttons)
-        for index, button in enumerate(self.buttons):
-            row, place = divmod(index, per_line)
-            on_line = min(per_line, count - row * per_line)
-            button.grid(row=row, column=per_line - on_line + 2 * place, columnspan=2, sticky="ew",
-                        padx=BUTTON_GAP // 2, pady=(BUTTON_GAP if row else 0, 0))
-        for column in range(2 * count):
-            self.columnconfigure(column, minsize=half_column(width) if column < 2 * per_line
-                                 else 0)
-
-
-def half_column(width):
-    """ Half the room a button takes, gap included. """
-    return (width + BUTTON_GAP + 1) // 2
+    def show_menu(self):
+        """ Open the menu under its button. """
+        button = self.button
+        try:
+            self.menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
+        finally:
+            self.menu.grab_release()
 
 
 class ResultsScreen(tk.Frame):
@@ -174,12 +154,12 @@ class ResultsScreen(tk.Frame):
         written = self.worker.shown.outcome != "failed"
         launcher = self.worker.shown.lava_launcher
         folder = self.worker.shown.folder
-        ResultButtons(card.body, self.app, card.background, (
-            ("Open HTML report", self.open_report, written),
+        OpenMenu(card.body, self.app, card.background, (
             ("Open in LAVA", self.open_lava, written) if launcher
-            else ("Explore LAVA", self.explore_lava, True),
+            else ("Discover LAVA (website)", self.explore_lava, True),
+            ("Open HTML report", self.open_report, written),
             ("Open TSV Folder", self.open_tsv_folder, bool(self.worker.shown.tsv_folder)),
-            ("Open output folder", self.open_folder, bool(folder)))).pack(pady=(14, 0))
+            ("Open output folder", self.open_folder, bool(folder)))).pack(pady=(OPEN_GAP, 0))
 
     def build_rows(self, card):
         """ The lines of the summary, in the card. """
