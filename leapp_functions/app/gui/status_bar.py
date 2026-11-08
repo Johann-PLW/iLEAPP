@@ -73,8 +73,7 @@ class Gear(tk.Label):
         self.pictures = {bright: images.load_icon("settings", GEAR_SIZE, color)
                          for bright, color in ((False, colors.text_secondary),
                                                (True, colors.text_primary))}
-        super().__init__(parent, image=self.pictures[False], bg=colors.main_bg, borderwidth=0,
-                         cursor="hand2")
+        super().__init__(parent, image=self.pictures[False], bg=colors.main_bg, borderwidth=0)
         self.bind("<Enter>", lambda _event: self.configure(image=self.pictures[True]))
         self.bind("<Leave>", lambda _event: self.configure(image=self.pictures[False]))
         # The main window opens it: see settings.SettingsControl
