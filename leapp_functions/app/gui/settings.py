@@ -5,11 +5,16 @@ The Settings window.
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+from leapp_functions import leapp
 from leapp_functions.app import history
 from leapp_functions.app.gui import themes
-from leapp_functions.app.gui.custom_widgets import GAP, MARGIN, Card, OutlineButton
+from leapp_functions.app.gui.custom_widgets import GAP, MARGIN, Caption, Card, OutlineButton
 
+BUTTON_GAP = 8
 HISTORY_TEXT = "Enable saving paths as recent history"
+HISTORY_HINT = ("Recent extraction and output paths are shared by every LEAPP tool. Each finished "
+                "run is also recorded under this tool's name, for LAVA to list on its welcome "
+                "screen.")
 
 
 class SettingsControl:
@@ -65,7 +70,8 @@ class SettingsWindow(tk.Toplevel):
         themes.title_bar(self, app.appearance.is_dark)
 
         self.history_enabled = tk.BooleanVar(self, value=history.is_history_enabled())
-        self.clear_button = self.build_history()
+        self.clear_buttons = self.build_history()
+        self.refresh_clear_buttons()
 
         close = OutlineButton(self, app, text="Close", command=self.destroy)
         close.pack(anchor="e", padx=MARGIN, pady=(GAP, MARGIN))
@@ -91,25 +97,53 @@ class SettingsWindow(tk.Toplevel):
             self.withdraw()
 
     def build_history(self):
-        """ The card for the history of paths shared by the LEAPPs. Returns its Clear button. """
+        """ The card for the history of paths shared by the LEAPPs. Returns its two Clear buttons,
+        the one for this LEAPP first. """
         card = Card(self, self.app, "HISTORY")
         card.pack(fill="x", padx=MARGIN, pady=(MARGIN, 0))
         ttk.Checkbutton(card.body, text=HISTORY_TEXT, style="Card.TCheckbutton",
                         variable=self.history_enabled,
                         command=self.save_history_enabled).pack(anchor="w", pady=(4, 0))
-        button = OutlineButton(card.body, self.app, style="in_card", text="Clear History…",
-                               command=self.clear_history)
-        button.pack(anchor="w", pady=(GAP, 0))
-        button.set_enabled(history.has_history())
-        return button
+        Caption(card.body, self.app, HISTORY_HINT, card.background).pack(fill="x", pady=(4, 0))
+
+        line = tk.Frame(card.body, bg=card.background)
+        line.pack(anchor="w", pady=(GAP, 0))
+        leapp_button = OutlineButton(line, self.app, style="in_card",
+                                     text=f"Clear {leapp.name} History",
+                                     command=self.clear_leapp_history)
+        leapp_button.pack(side="left")
+        all_button = OutlineButton(line, self.app, style="in_card", text="Clear All History",
+                                   command=self.clear_all_history)
+        all_button.pack(side="left", padx=(BUTTON_GAP, 0))
+        return leapp_button, all_button
+
+    def refresh_clear_buttons(self):
+        """ A Clear button can be used only when there is something for it to clear. """
+        leapp_button, all_button = self.clear_buttons
+        leapp_button.set_enabled(history.has_single_leapp_history(leapp.name.lower()))
+        all_button.set_enabled(history.has_history())
 
     def save_history_enabled(self):
         """ The check box has been clicked: the setting is saved at once. """
         history.set_history_enabled(self.history_enabled.get())
 
-    def clear_history(self):
-        """ Choose which history to clear. """
-        messagebox.showinfo("Clear History", "Clearing the history is not built yet.", parent=self)
+    def clear_leapp_history(self):
+        """ Clear the paths shared by the LEAPPs and this LEAPP's recent runs, once confirmed. """
+        if messagebox.askyesno(
+                f"Clear {leapp.name} history",
+                f"Clear shared recent input/output paths and {leapp.name} recent run entries?",
+                parent=self):
+            history.clear_single_leapp_history(leapp.name.lower())
+            self.refresh_clear_buttons()
+
+    def clear_all_history(self):
+        """ Clear the whole history of the LEAPPs, once confirmed. """
+        if messagebox.askyesno(
+                "Clear all LEAPP history",
+                "Clear all shared LEAPP history, including recent input and output paths?",
+                parent=self):
+            history.clear_history()
+            self.refresh_clear_buttons()
 
     def place_over(self, app):
         """ Centre the window over the main window. """
