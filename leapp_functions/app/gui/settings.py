@@ -27,6 +27,7 @@ class SettingsControl:
         app.bind("<Map>", self.on_minimize)
         app.bind("<Unmap>", self.on_minimize)
         app.bind("<Activate>", self.on_activate)
+        app.bind("<<OpenSettings>>", lambda _event: self.open())
 
     def opened(self):
         """ The Settings window if it is open. """

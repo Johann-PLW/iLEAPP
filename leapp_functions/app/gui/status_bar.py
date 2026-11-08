@@ -10,9 +10,11 @@ The widgets are made once. refresh() changes their texts, their style and their 
 import tkinter as tk
 from tkinter import ttk
 
-from leapp_functions.app.gui import themes
+from leapp_functions.app.gui import images, themes
 from leapp_functions.app.gui.app_state import is_waiting
 from leapp_functions.app.gui.custom_widgets import OutlineButton
+
+GEAR_SIZE = 24
 
 # For each screen: its title, its subtitle and the text of its main button.
 TEXTS = {
@@ -63,6 +65,22 @@ class BarTexts(tk.Frame):
         self.progress_bar.pack(fill="x", padx=(3, 0), pady=(2, 0))  # lined up with the texts
 
 
+class Gear(tk.Label):
+    """ The icon that opens the Settings window. """
+
+    def __init__(self, parent, app):
+        colors = app.colors
+        self.pictures = {bright: images.load_icon("settings", GEAR_SIZE, color)
+                         for bright, color in ((False, colors.text_secondary),
+                                               (True, colors.text_primary))}
+        super().__init__(parent, image=self.pictures[False], bg=colors.main_bg, borderwidth=0,
+                         cursor="hand2")
+        self.bind("<Enter>", lambda _event: self.configure(image=self.pictures[True]))
+        self.bind("<Leave>", lambda _event: self.configure(image=self.pictures[False]))
+        # The main window opens it: see settings.SettingsControl
+        self.bind("<Button-1>", lambda _event: app.event_generate("<<OpenSettings>>"))
+
+
 class StatusBar(tk.Frame):
     """ The title and subtitle of the screen, and the Back and Next buttons. """
 
@@ -71,20 +89,23 @@ class StatusBar(tk.Frame):
         super().__init__(parent, bg=colors.main_bg)
         self.app = app
 
-        tk.Frame(self, height=1, bg=colors.border).grid(row=0, column=0, columnspan=4, sticky="ew")
-        self.columnconfigure(0, weight=1)
+        tk.Frame(self, height=1, bg=colors.border).grid(row=0, column=0, columnspan=5, sticky="ew")
+        self.columnconfigure(1, weight=1)
+
+        self.gear = Gear(self, app)
+        self.gear.grid(row=1, column=0, padx=(0, 12), pady=(8, 0))
 
         self.texts = BarTexts(self, app)
-        self.texts.grid(row=1, column=0, sticky="ew", pady=(8, 0))
+        self.texts.grid(row=1, column=1, sticky="ew", pady=(8, 0))
 
         self.back_button = OutlineButton(self, app, text="Back", command=app.go_back)
-        self.back_button.grid(row=1, column=1, padx=(16, 0), pady=(8, 0))
+        self.back_button.grid(row=1, column=2, padx=(16, 0), pady=(8, 0))
         self.next_button = OutlineButton(self, app, command=app.go_next, style="filled")
-        self.next_button.grid(row=1, column=2, padx=(10, 0), pady=(8, 0))
+        self.next_button.grid(row=1, column=3, padx=(10, 0), pady=(8, 0))
         self.stop_button = OutlineButton(self, app, command=app.go_next)
-        self.stop_button.grid(row=1, column=2, padx=(10, 0), pady=(8, 0))
+        self.stop_button.grid(row=1, column=3, padx=(10, 0), pady=(8, 0))
         self.close_button = OutlineButton(self, app, text="Close", command=app.close, style="filled")
-        self.close_button.grid(row=1, column=3, padx=(10, 0), pady=(8, 0))
+        self.close_button.grid(row=1, column=4, padx=(10, 0), pady=(8, 0))
 
         self.refresh()
 
