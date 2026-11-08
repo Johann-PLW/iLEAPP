@@ -21,6 +21,7 @@ from leapp_functions.app.gui.custom_widgets import MARGIN, ScrollArea
 from leapp_functions.app.gui.results import ResultsScreen
 from leapp_functions.app.gui.review import ReviewScreen
 from leapp_functions.app.gui.run import RunControl, RunScreen
+from leapp_functions.app.gui.settings import SettingsControl
 from leapp_functions.app.gui.source import SourceScreen
 from leapp_functions.app.gui.status_bar import StatusBar
 import ileapp
@@ -61,14 +62,14 @@ class MainWindow(tk.Tk):
         self.appearance = themes.Appearance(leapp.theme)
         ttk.Style(self).theme_use("clam")
 
-        # Settings
+        settings = SettingsControl(self)
         if sys.platform == "darwin":
             # On macOS: Settings item in the application menu and ⌘,
-            self.createcommand("::tk::mac::ShowPreferences", self.open_settings)
+            self.createcommand("::tk::mac::ShowPreferences", settings.open)
             self.createcommand("::tk::mac::Quit", self.close)
         else:
             # Other platforms: Ctrl,
-            self.bind_all("<Control-comma>", lambda _event: self.open_settings())
+            self.bind_all("<Control-comma>", lambda _event: settings.open())
 
         self.bind("<Control-i>", lambda _event: self.focus_field("focus_input"))
         self.bind("<Control-o>", lambda _event: self.focus_field("focus_output"))
@@ -147,12 +148,7 @@ class MainWindow(tk.Tk):
                 self.widgets[name].destroy()
         self.configure(bg=self.colors.main_bg)
         themes.apply_styles(ttk.Style(self), self.colors)
-        if sys.platform == "darwin":
-            appearance = "darkaqua" if self.appearance.is_dark else "aqua"
-            try:
-                self.tk.call("::tk::unsupported::MacWindowStyle", "appearance", self, appearance)
-            except tk.TclError:
-                pass  # Tk before 8.6.10 has no such setting
+        themes.title_bar(self, self.appearance.is_dark)
 
         self.widgets["header"] = Header(self, self)
         self.widgets["header"].pack(fill="x")
@@ -249,10 +245,6 @@ class MainWindow(tk.Tk):
         action = getattr(self.widgets.get("screen"), method, None)
         if action is not None:
             action()
-
-    def open_settings(self):
-        """ Settings window, not yet available. """
-        messagebox.showinfo("Settings", "The Settings window is not built yet.", parent=self)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ for each LEAPP, so that this module can stay the same in all of them.
 
 import re
 import sys
+import tkinter as tk
 
 from PIL import ImageTk
 
@@ -93,6 +94,17 @@ def sans(size, weight="normal"):
 def mono(size, weight="normal"):
     """ The monospaced font. """
     return (MONO, -size, weight)
+
+
+def title_bar(window, is_dark):
+    """ On macOS, give a window's title bar the dark or the light look of the palette. """
+    if sys.platform != "darwin":
+        return
+    appearance = "darkaqua" if is_dark else "aqua"
+    try:
+        window.tk.call("::tk::unsupported::MacWindowStyle", "appearance", window, appearance)
+    except tk.TclError:
+        pass
 
 
 def apply_styles(style, colors):
