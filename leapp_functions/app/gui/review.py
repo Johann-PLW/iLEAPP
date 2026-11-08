@@ -13,6 +13,7 @@ from leapp_functions.app.gui.artifacts import unknown_text
 from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, mark_line, two_columns,
                                                     wrap_to_width)
 from leapp_functions.app.output import default_output_folder_name
+from scripts.raw_image import FOUND_AUTOMATICALLY, RawInput, repeat_note
 
 CHECK_DELAY = 1000
 KEY_WIDTH = 104
@@ -36,12 +37,44 @@ def artifacts_text(artifacts):
     return f"{text} · {slow} slow or large" if slow else text
 
 
+def opened_images(state):
+    """ What the source screen has opened for a disk image (RawInput). """
+    unlock = state.run.unlock
+    opened = unlock.result if unlock is not None else None
+    return opened if isinstance(opened, RawInput) else None
+
+
+def unread_members_text(state):
+    """ When RAID members were found beside the image given and the examiner chose to read the
+    image alone: how many will not be read. """
+    opened = opened_images(state)
+    search = opened.search if opened is not None else None
+    if search is None or search.used or not search.added:
+        return ""
+    return (f"RAID members found and not read: {len(search.added)}. Only "
+            f"{os.path.basename(search.given)} will be read.")
+
+
+def extraction_text(state):
+    """ The paths the run will read, one per line. """
+    opened = opened_images(state)
+    if opened is None:
+        return "\n".join(state.source_paths())
+    found = set(opened.found)
+    lines = [path + (f" ({FOUND_AUTOMATICALLY})" if path in found else "") for path in opened.paths]
+    if opened.search is not None and not opened.search.found:
+        lines.append(f"({opened.search.outcome()})")
+    lines += [f"({path} was given too and is {repeat_note(path, other)})"
+              for path, other in opened.repeats]
+    return "\n".join(lines)
+
+
 def summary_rows(state):
     """ The lines of the summary: (key, value). """
     run, case = state.run, state.case
     filled = [variable.get() for variable in (case.number, case.agency, case.examiner) if variable.get()]
     return (("Case", " · ".join(filled) or "No case data"),
-            ("Extraction", "\n".join(state.source_paths())),
+            ("Extraction", extraction_text(state)),
             ("Read as", run.detected.label),
             *((name.capitalize(), variable.get() or NONE) for name, variable in run.secrets.items()),
             ("Artifacts", artifacts_text(state.artifacts)),
@@ -68,6 +101,8 @@ def notices(state):
     attention = [run.detected.note] if run.detected.note else []
     if run.unlock is not None and run.unlock.shown.locked:
         attention.append("Locked volumes are not read.")
+    if unread_members_text(state):
+        attention.append(unread_members_text(state))
     if slow_selected(artifacts):
         attention.append(f"Slow or large artifacts selected: {slow_selected(artifacts)}. "
                          "The run may take much longer.")
