@@ -90,6 +90,7 @@ class MainWindow(tk.Tk):
 
         self.build()
         self.fix_size()
+        self.deiconify()
         self.watch_unlock()
         if sys.platform == "darwin":
             # the window has to be on screen first

@@ -35,10 +35,12 @@ def zoom(window, zoomed):
 
 
 def measure(window):
-    """ Where a window can be on the screen. """
+    """ Where a window can be on the screen the mouse pointer is on. """
     area = (0, 0, window.winfo_screenwidth(), window.winfo_screenheight() - RESERVE)
     try:
         window.attributes("-alpha", 0)
+        pointer_x, pointer_y = window.winfo_pointerxy()
+        window.geometry(f"1x1+{pointer_x}+{pointer_y}")
         window.update()
         if zoom(window, True):
             if window.winfo_height() > SMALLEST_MAXIMIZED:
@@ -47,21 +49,14 @@ def measure(window):
             zoom(window, False)
     except tk.TclError:
         pass  # a system that cannot do this: the screen less what is left to it
+    window.withdraw()
     window.attributes("-alpha", 1)
     return area
 
 
 def place(window, area, width, height):
-    """ Give the window a size and keep it whole on the screen it was measured on, moving it up or
-    to the left if need be. A window on another screen stays where it is. """
+    """ Give the window a size and centre it on the screen it was measured on. """
     left, top, room_width, room_height = area
-    position = frame_position(window)
-    target = f"{width}x{height}"
-    if position is not None:
-        x, y = position
-        if left <= x + width // 2 < left + room_width and top <= y < top + room_height:
-            x = max(left, min(x, left + room_width - width))
-            y = max(top, min(y, top + room_height - height))
-        target += f"+{x}+{y}"
-    if target != window.geometry():
-        window.geometry(target)
+    x = left + max(0, (room_width - width) // 2)
+    y = top + max(0, (room_height - height) // 2)
+    window.geometry(f"{width}x{height}+{x}+{y}")
