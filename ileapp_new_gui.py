@@ -10,7 +10,7 @@ from tkinter import messagebox, ttk
 
 from leapp_functions.app.gui import quick_exit
 from leapp_functions import leapp
-from leapp_functions.app import artifact_list
+from leapp_functions.app import artifact_list, history
 from leapp_functions.app.gui import images, themes, window_area
 from leapp_functions.app.gui.app_state import AppState
 from leapp_functions.app.gui.header import Header
@@ -59,7 +59,7 @@ class MainWindow(tk.Tk):
 
         self.app_state = AppState(self.refresh_steps)
         self.app_state.artifacts = artifact_list.load_artifacts()
-        self.appearance = themes.Appearance(leapp.theme)
+        self.appearance = themes.Appearance(leapp.theme, history.get_appearance(leapp.name))
         ttk.Style(self).theme_use("clam")
 
         settings = SettingsControl(self)

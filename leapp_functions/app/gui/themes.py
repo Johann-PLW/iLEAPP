@@ -17,6 +17,7 @@ HEX_COLOUR = re.compile(r"#[0-9A-Fa-f]{6}")
 CHECK_BOX = 16
 CHECK_BOX_GAP = 8
 CHECK_BOX_PICTURES = {}
+RADIO_PICTURES = {}
 LIST_ROW = 22
 ROLES = frozenset((
     "border",  # A card's border, an input's border with the focus, the line above the status bar
@@ -61,21 +62,28 @@ def palette(theme, name):
 
 
 class Appearance:
-    """ The two palettes of the window, and the one in use. """
+    """ The two palettes of the window, and the one in use: the dark one unless the light one is
+    asked for. """
 
-    def __init__(self, config):
+    def __init__(self, config, name=None):
         self.dark = palette(config, "dark")
         self.light = palette(config, "light")
         self.colors = self.dark
+        self.use(name)
 
     @property
     def is_dark(self):
         """Return True if the palette in use is the dark one, otherwise False."""
         return self.colors is self.dark
 
-    def toggle(self):
-        """Switch to the other palette."""
-        self.colors = self.light if self.is_dark else self.dark
+    @property
+    def name(self):
+        """ "dark" or "light". """
+        return "dark" if self.is_dark else "light"
+
+    def use(self, name):
+        """ Use the palette named "light", or the dark one for any other name. """
+        self.colors = self.light if name == "light" else self.dark
 
 
 if sys.platform == "darwin":
@@ -134,6 +142,7 @@ def apply_styles(style, colors):
     for name in ("Field", "Chosen"):
         style.configure(f"{name}.TButton", padding=(18, 3, 18, 4))
     style_check_box(style, colors)
+    style_radio_button(style, colors)
     style_lists(style, colors)
     style.configure("Run.Horizontal.TProgressbar", background=colors.header_bg, troughcolor=colors.line,
                     bordercolor=colors.line, lightcolor=colors.header_bg, darkcolor=colors.header_bg,
@@ -166,24 +175,41 @@ def check_box_colors(colors):
             "disabled": (colors.card_bg, colors.line, None)}
 
 
+def indicator(style, element, pictures, kept):
+    """ An image element of ttk with a picture for each state of a check box or radio button. """
+    if element in style.element_names():
+        for state, picture in pictures.items():
+            kept[state].paste(picture)
+        return
+    for state, picture in pictures.items():
+        kept[state] = ImageTk.PhotoImage(picture, master=style.master)
+    style.element_create(element, "image", kept["off"], ("disabled", kept["disabled"]),
+                         ("selected", kept["on"]), sticky="")
+
+
+def style_choice(style, colors, kind, element):
+    """ The layout and colours of a check box or radio button in a card. """
+    style.layout(f"Card.T{kind}", [(f"{kind}.padding", {"sticky": "nswe", "children": [
+        (element, {"side": "left", "sticky": ""}),
+        (f"{kind}.focus", {"side": "left", "sticky": "w",
+                           "children": [(f"{kind}.label", {"sticky": "nswe"})]})]})])
+    style.configure(f"Card.T{kind}", background=colors.card_bg, foreground=colors.text_primary,
+                    font=sans(12), focuscolor=colors.card_bg)
+    style.map(f"Card.T{kind}", background=[("active", colors.card_bg)],
+              foreground=[("disabled", colors.text_legend)])
+
+
 def style_check_box(style, colors):
     """ A check box in a card. """
     pictures = {state: images.check_box_image(CHECK_BOX, box_colors, CHECK_BOX_GAP)
                 for state, box_colors in check_box_colors(colors).items()}
-    if "Tick.indicator" in style.element_names():
-        for state, picture in pictures.items():
-            CHECK_BOX_PICTURES[state].paste(picture)
-    else:
-        for state, picture in pictures.items():
-            CHECK_BOX_PICTURES[state] = ImageTk.PhotoImage(picture, master=style.master)
-        style.element_create("Tick.indicator", "image", CHECK_BOX_PICTURES["off"],
-                             ("disabled", CHECK_BOX_PICTURES["disabled"]),
-                             ("selected", CHECK_BOX_PICTURES["on"]), sticky="")
-    style.layout("Card.TCheckbutton", [("Checkbutton.padding", {"sticky": "nswe", "children": [
-        ("Tick.indicator", {"side": "left", "sticky": ""}),
-        ("Checkbutton.focus", {"side": "left", "sticky": "w",
-                               "children": [("Checkbutton.label", {"sticky": "nswe"})]})]})])
-    style.configure("Card.TCheckbutton", background=colors.card_bg, foreground=colors.text_primary,
-                    font=sans(12), focuscolor=colors.card_bg)
-    style.map("Card.TCheckbutton", background=[("active", colors.card_bg)],
-              foreground=[("disabled", colors.text_legend)])
+    indicator(style, "Tick.indicator", pictures, CHECK_BOX_PICTURES)
+    style_choice(style, colors, "Checkbutton", "Tick.indicator")
+
+
+def style_radio_button(style, colors):
+    """ A radio button in a card: the colours of the check box, in a circle. """
+    pictures = {state: images.radio_image(CHECK_BOX, box_colors, CHECK_BOX_GAP)
+                for state, box_colors in check_box_colors(colors).items()}
+    indicator(style, "Dot.indicator", pictures, RADIO_PICTURES)
+    style_choice(style, colors, "Radiobutton", "Dot.indicator")

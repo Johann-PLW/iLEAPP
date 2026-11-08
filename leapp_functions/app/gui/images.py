@@ -116,6 +116,28 @@ def load_icon(name, size, color, margin=0, tick=None):
 
 
 @cache
+def radio_image(size, colors, gap):
+    """ A radio button.
+    Args:
+        size (int): Diameter of the circle in pixels
+        colors (tuple): Hex colours of the inside, of the border and of the dot (None: no dot)
+        gap (int): Transparent pixels on the right of the circle
+    """
+    fill, border, dot = colors
+    big = size * SMOOTHING
+    circle = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(circle)
+    draw.ellipse([0, 0, big - 1, big - 1], fill=border)
+    draw.ellipse([SMOOTHING, SMOOTHING, big - 1 - SMOOTHING, big - 1 - SMOOTHING], fill=fill)
+    if dot is not None:
+        margin = big // 4
+        draw.ellipse([margin, margin, big - 1 - margin, big - 1 - margin], fill=dot)
+    image = Image.new("RGBA", (size + gap, size), (0, 0, 0, 0))
+    image.paste(circle.resize((size, size), Image.Resampling.LANCZOS), (0, 0))
+    return image
+
+
+@cache
 def check_box_image(size, colors, gap, mark="check"):
     """ A square box with a 1 pixel border, with a tick in it when a tick colour is given, as a
     Pillow image followed by a transparent gap before the text.

@@ -11,6 +11,7 @@ from leapp_functions.app.gui import themes
 from leapp_functions.app.gui.custom_widgets import GAP, MARGIN, Caption, Card, OutlineButton
 
 BUTTON_GAP = 8
+APPEARANCES = (("dark", "Dark"), ("light", "Light"))
 HISTORY_TEXT = "Enable saving paths as recent history"
 HISTORY_HINT = ("Recent extraction and output paths are shared by every LEAPP tool. Each finished "
                 "run is also recorded under this tool's name, for LAVA to list on its welcome "
@@ -40,7 +41,19 @@ class SettingsControl:
             window.lift()
             window.focus_set()
         else:
-            self.window = SettingsWindow(self.app)
+            self.window = SettingsWindow(self)
+
+    def change_appearance(self, name):
+        """ Save the appearance chosen and build both windows again in its colours. """
+        history.set_appearance(leapp.name.lower(), name)
+        self.app.appearance.use(name)
+        window = self.opened()
+        position = None
+        if window is not None:
+            position = "+" + window.geometry().split("+", 1)[1]
+            window.destroy()
+        self.app.build()
+        self.window = SettingsWindow(self, position)
 
     def on_minimize(self, event):
         """ The main window has been minimised or brought back: the Settings window follows it. """
@@ -60,15 +73,19 @@ class SettingsWindow(tk.Toplevel):
     """ The settings, in a window of its own above the main one. The main window cannot be used
     while it is open. """
 
-    def __init__(self, app):
+    def __init__(self, control, position=None):
+        app = control.app
         super().__init__(app, bg=app.colors.main_bg)
         self.withdraw()  # hidden while it is built, so that it does not appear in a corner first
         self.app = app
+        self.control = control
         self.title("Settings")
         self.resizable(False, False)
         self.transient(app)
         themes.title_bar(self, app.appearance.is_dark)
 
+        self.appearance = tk.StringVar(self, value=app.appearance.name)
+        self.build_appearance()
         self.history_enabled = tk.BooleanVar(self, value=history.is_history_enabled())
         self.clear_buttons = self.build_history()
         self.refresh_clear_buttons()
@@ -78,7 +95,10 @@ class SettingsWindow(tk.Toplevel):
         self.bind("<Escape>", lambda _event: self.destroy())
         self.bind("<Map>", self.on_map)
 
-        self.place_over(app)
+        if position is None:
+            self.place_over(app)
+        else:
+            self.geometry(position)
         self.deiconify()
 
     def on_map(self, event):
@@ -96,11 +116,27 @@ class SettingsWindow(tk.Toplevel):
         else:
             self.withdraw()
 
+    def build_appearance(self):
+        """ The card to choose the colours of the windows. """
+        card = Card(self, self.app, "APPEARANCE")
+        card.pack(fill="x", padx=MARGIN, pady=(MARGIN, 0))
+        for row, (name, text) in enumerate(APPEARANCES):
+            ttk.Radiobutton(card.body, text=text, value=name, variable=self.appearance,
+                            style="Card.TRadiobutton",
+                            command=self.choose_appearance).pack(anchor="w",
+                                                                 pady=(4 if row else 0, 0))
+
+    def choose_appearance(self):
+        """ A radio button has been clicked. """
+        name = self.appearance.get()
+        if name != self.app.appearance.name:
+            self.app.after_idle(self.control.change_appearance, name)
+
     def build_history(self):
         """ The card for the history of paths shared by the LEAPPs. Returns its two Clear buttons,
         the one for this LEAPP first. """
         card = Card(self, self.app, "HISTORY")
-        card.pack(fill="x", padx=MARGIN, pady=(MARGIN, 0))
+        card.pack(fill="x", padx=MARGIN, pady=(GAP, 0))
         ttk.Checkbutton(card.body, text=HISTORY_TEXT, style="Card.TCheckbutton",
                         variable=self.history_enabled,
                         command=self.save_history_enabled).pack(anchor="w", pady=(4, 0))
