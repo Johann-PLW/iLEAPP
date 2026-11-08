@@ -131,7 +131,8 @@ class RunWorker:
         history.record_output_path(request.output)
 
         initialize_lava(input_text(request.input_path, request.found),
-                        out_params.output_folder_base, request.detected.kind, request.profile)
+                        out_params.output_folder_base, request.detected.kind, request.profile,
+                        request.case)
         successful = self.crunch(request)
         lava_finalize_output(out_params.output_folder_base,
                              "Stopped" if GuiWindow.stopped else "Complete")
