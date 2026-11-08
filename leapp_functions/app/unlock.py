@@ -7,7 +7,6 @@ import threading
 from collections import namedtuple
 from types import SimpleNamespace
 
-from leapp_functions.app.input_type import backup_type, is_encrypted
 from scripts.raw_image import unlock_raw_input
 from scripts.search_files import decrypt_itunes_backup
 
@@ -111,19 +110,18 @@ class Unlock:
         self.questions.put(Question("error", title, message))
 
 
-def raw_image_sequence(paths):
+def raw_image_sequence(paths, _detected):
     """ The sequence that opens a raw disk image: it can be encrypted, hold encrypted volumes
-    or have RAID members beside it. """
+    or have RAID members beside it. Whether it asks anything is known only once it has run. """
     return lambda asker: unlock_raw_input(paths, asker)
 
 
-def backup_sequence(paths):
-    """ The sequence that asks for the password of an iTunes or Finder backup, None when it
-    is not encrypted. """
-    path = paths[0]
-    if not is_encrypted(path, backup_type(path)):
+def backup_sequence(paths, detected):
+    """ The sequence that asks for the password of a backup.
+    The detection has read that on its own thread: the window does not read the backup again. """
+    if not detected.encrypted:
         return None
-    return lambda asker: unlock_backup(path, asker)
+    return lambda asker: unlock_backup(paths[0], asker)
 
 
 def unlock_backup(path, asker):
@@ -143,6 +141,4 @@ def unlock_backup(path, asker):
         prompt = f"{message}. {BACKUP_PROMPT}"
 
 
-# For each input type that may need something to be opened: its paths -> the sequence that
-# opens it, or None when there is nothing to ask
 UNLOCKERS = {"raw": raw_image_sequence, "itunes": backup_sequence}

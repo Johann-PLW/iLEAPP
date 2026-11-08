@@ -18,6 +18,7 @@ from scripts.ilapfuncs import GuiWindow, OutputParameters, is_platform_windows, 
 from scripts.lavafuncs import initialize_lava, lava_finalize_output, lava_json_name
 from scripts.raw_image import input_text
 
+TSV_FOLDER = "_TSV Exports"
 SOURCE_CHANGED = "The extraction has changed since it was chosen: check it on the Source screen."
 
 
@@ -67,7 +68,8 @@ class RunWorker:
         self.messages = GuiWindow.message_queue = queue.Queue()
         self.shown = SimpleNamespace(log=[], done=0, total=len(request.plugins), outcome=None,
                                      detail="", folder="",
-                                     log_file="", stopping=False, lava_launcher=None, summary=None)
+                                     log_file="", stopping=False, lava_launcher=None, summary=None,
+                                     tsv_folder="")
         threading.Thread(target=self.work, daemon=True).start()
 
     def stop(self):
@@ -93,7 +95,14 @@ class RunWorker:
             problem = self.refusal()
             outcome = ("refused", problem) if problem else ("done", self.parse())
         finally:
+            self.shown.tsv_folder = self.tsv_folder()
             self.messages.put(outcome or ("failed", traceback.format_exc()))
+
+    def tsv_folder(self):
+        """ The folder of the TSV exports. """
+        folder = self.shown.folder
+        path = os.path.join(folder, TSV_FOLDER) if folder else ""
+        return path if path and os.path.isdir(path) else ""
 
     def prepare(self):
         """ The paths of the run, and the name of its report folder. """

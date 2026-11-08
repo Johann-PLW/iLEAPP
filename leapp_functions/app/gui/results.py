@@ -21,7 +21,6 @@ ROW_GAP = 8
 BUTTON_GAP = 8
 BUTTONS_PER_LINE = 2  # until the width of the card is known
 REPORT_FILE = "index.html"
-TSV_FOLDER = "_TSV Exports"
 ERRORS_SHOWN = 6
 
 
@@ -179,8 +178,7 @@ class ResultsScreen(tk.Frame):
             ("Open HTML report", self.open_report, written),
             ("Open in LAVA", self.open_lava, written) if launcher
             else ("Explore LAVA", self.explore_lava, True),
-            ("Open TSV Folder", self.open_tsv_folder,
-             bool(folder) and os.path.isdir(os.path.join(folder, TSV_FOLDER))),
+            ("Open TSV Folder", self.open_tsv_folder, bool(self.worker.shown.tsv_folder)),
             ("Open output folder", self.open_folder, bool(folder)))).pack(pady=(14, 0))
 
     def build_rows(self, card):
@@ -238,4 +236,4 @@ class ResultsScreen(tk.Frame):
 
     def open_tsv_folder(self):
         """ The folder of the TSV exports, in the report folder. """
-        self.open_in_file_manager(os.path.join(self.worker.shown.folder, TSV_FOLDER), "TSV folder")
+        self.open_in_file_manager(self.worker.shown.tsv_folder, "TSV folder")

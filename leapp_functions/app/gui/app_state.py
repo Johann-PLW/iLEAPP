@@ -159,7 +159,7 @@ class AppState:
             self.run.unlock = None
         detected = self.run.detected
         unlocker = UNLOCKERS.get(detected.kind) if detected is not None else None
-        sequence = unlocker(self.source_paths()) if unlocker else None
+        sequence = unlocker(self.source_paths(), detected) if unlocker else None
         if sequence is not None:
             self.run.unlock = Unlock(sequence)
 

@@ -13,7 +13,7 @@ from scripts.raw_image import (RAW_IMAGE_SUFFIXES, logical_among, logical_refusa
                                names_an_image_folder, names_raw_images)
 from scripts.vendor import qnxprobe
 
-Detected = namedtuple("Detected", "kind label note problem", defaults=("", ""))
+Detected = namedtuple("Detected", "kind label note problem encrypted", defaults=("", "", False))
 
 NO_ANSWER = Detected("", "No answer", problem="Its drive does not answer: it may be disconnected.")
 LOOKING = Detected("", "Looking at the source", note="Waiting for its drive to answer.")
@@ -106,8 +106,9 @@ def detect_backup(path, kind, supported):
     if not is_encrypted(path, kind):
         return Detected("itunes", label)
     if kind == "mbdb":
-        return Detected("", f"{label}, encrypted", problem="iTunes Legacy Encrypted Backup not supported")
-    return Detected("itunes", f"{label}, encrypted")
+        return Detected("", f"{label}, encrypted", problem="iTunes Legacy Encrypted Backup not supported",
+                        encrypted=True)
+    return Detected("itunes", f"{label}, encrypted", encrypted=True)
 
 
 def backup_type(path):
