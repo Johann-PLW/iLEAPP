@@ -79,6 +79,10 @@ class OutlineButton(tk.Frame):
         self.button.invoke()
 
 
+# Time for the window manager to move the focus before it is given back, in milliseconds.
+FOCUS_DELAY = 50
+
+
 def open_menu(menu, button):
     """ Open a menu under its button. """
     x, y = button.winfo_rootx(), button.winfo_rooty() + button.winfo_height()
@@ -94,8 +98,14 @@ def open_menu(menu, button):
     before = window.focus_get()
 
     def give_focus_back():
-        if window.winfo_exists() and window.state() == "normal" and window.focus_displayof() is None:
-            (before if before is not None and before.winfo_exists() else window).focus_force()
+        if not window.winfo_exists() or window.state() != "normal":
+            return
+        current = window.focus_displayof()
+        if current is not None and current is not menu and current.winfo_toplevel() is not window:
+            return
+        if current is None or current is menu:
+            current = before if before is not None and before.winfo_exists() else window
+        current.focus_force()
 
     def close(event=None):
         if event is not None and event.type == tk.EventType.Configure and event.widget is not window:
@@ -104,7 +114,7 @@ def open_menu(menu, button):
             sequence, identifier = bound.pop()
             window.unbind(sequence, identifier)
         menu.unpost()
-        window.after_idle(give_focus_back)
+        window.after(FOCUS_DELAY, give_focus_back)
 
     for sequence in ("<Configure>", "<Unmap>", "<ButtonPress>"):
         bound.append((sequence, window.bind(sequence, close, add="+")))
