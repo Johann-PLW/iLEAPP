@@ -54,7 +54,7 @@ class QuickExitTests(unittest.TestCase):
 
     def test_it_comes_before_the_other_imports_of_ours_in_the_window_program(self):
         """ Imported later, its hook would run before the others and skip them. """
-        tree = ast.parse((REPO_ROOT / "ileapp_new_gui.py").read_text(encoding="utf-8"))
+        tree = ast.parse((REPO_ROOT / "ileappGUI.py").read_text(encoding="utf-8"))
         imports = [node for node in tree.body if isinstance(node, (ast.Import, ast.ImportFrom))]
         first = next(node for node in imports if not is_standard(node))
         self.assertEqual(first.module, "leapp_functions.app.gui")
