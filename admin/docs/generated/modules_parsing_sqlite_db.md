@@ -82,6 +82,7 @@ This document outlines LEAPP modules parsing SQLite databases using the new `get
 | cnn |
 | coinbaseWallet |
 | coverMe |
+| craigslist |
 | discordChats |
 | discordServers |
 | discord_a |
@@ -106,6 +107,7 @@ This document outlines LEAPP modules parsing SQLite databases using the new `get
 | googleDuo |
 | googleHome |
 | googleMaps |
+| googleMeasurement |
 | googlePhotos |
 | googleSheets |
 | googleTranslate |
@@ -146,10 +148,12 @@ This document outlines LEAPP modules parsing SQLite databases using the new `get
 | notion |
 | nsVault |
 | nytimes |
+| offerup |
 | oneDrive |
 | ooklaSpeedtestData |
 | parsecdCache |
 | payByPhone |
+| paypal |
 | personalizationPortrait |
 | photosDbexif |
 | photosGraphMoments |
