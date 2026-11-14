@@ -15,7 +15,7 @@ from leapp_functions.app.artifact_list import (by_title, group_by_category, load
                                                toggle, write_profile)
 from leapp_functions.app.gui import images, themes
 from leapp_functions.app.gui.custom_widgets import (GAP, SIDE_WIDTH, Caption, Card, Field,
-                                                    LabeledEntry, OutlineButton, show_example)
+                                                    LabeledEntry, OutlineButton, open_menu, show_example)
 
 SEARCH_EXAMPLE = "Search an artifact or a category"
 VIEWS = (("all", "All"), ("category", "Category"))
@@ -173,11 +173,7 @@ class SearchLine(tk.Frame):
         self.profile_menu.entryconfigure(
             SHOW_PROFILE, state="normal" if self.state.artifacts.profile else "disabled")
         button = self.profile_button
-        try:
-            self.profile_menu.tk_popup(button.winfo_rootx(),
-                                       button.winfo_rooty() + button.winfo_height())
-        finally:
-            self.profile_menu.grab_release()
+        open_menu(self.profile_menu, button)
 
     def show_view(self, chosen):
         """ Show which view is chosen. """

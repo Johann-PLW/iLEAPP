@@ -10,8 +10,8 @@ import webbrowser
 
 from leapp_functions import leapp
 from leapp_functions.app.gui import themes
-from leapp_functions.app.gui.custom_widgets import (Card, OutlineButton, mark_line, two_columns,
-                                                    wrap_to_width)
+from leapp_functions.app.gui.custom_widgets import (Card, OutlineButton, mark_line, open_menu,
+                                                    two_columns, wrap_to_width)
 from leapp_functions.lava_launcher import LAVA_WEBSITE, open_lava_project, open_output_folder
 from scripts import ilapfuncs
 from scripts.lavafuncs import lava_json_name
@@ -118,10 +118,7 @@ class OpenMenu(tk.Frame):
     def show_menu(self):
         """ Open the menu under its button. """
         button = self.button
-        try:
-            self.menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
-        finally:
-            self.menu.grab_release()
+        open_menu(self.menu, button)
 
 
 class ResultsScreen(tk.Frame):

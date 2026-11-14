@@ -79,6 +79,35 @@ class OutlineButton(tk.Frame):
         self.button.invoke()
 
 
+def open_menu(menu, button):
+    """ Open a menu under its button. """
+    x, y = button.winfo_rootx(), button.winfo_rooty() + button.winfo_height()
+    if menu.tk.call("tk", "windowingsystem") != "x11":
+        try:
+            menu.tk_popup(x, y)
+        finally:
+            menu.grab_release()
+        return
+
+    window = button.winfo_toplevel()
+    bound = []
+
+    def close(event=None):
+        if event is not None and event.type == tk.EventType.Configure and event.widget is not window:
+            return
+        while bound:
+            sequence, identifier = bound.pop()
+            window.unbind(sequence, identifier)
+        menu.unpost()
+
+    for sequence in ("<Configure>", "<Unmap>", "<ButtonPress>"):
+        bound.append((sequence, window.bind(sequence, close, add="+")))
+    menu.bind("<FocusOut>", close)
+    menu.bind("<Unmap>", close)
+    menu.post(x, y)
+    menu.focus_set()
+
+
 class Tooltip:
     """ Tooltip for inputs with long text. A tooltip that has no text is not shown. """
 

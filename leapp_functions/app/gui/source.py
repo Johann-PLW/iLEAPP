@@ -13,7 +13,8 @@ from leapp_functions.app.gui import themes
 from leapp_functions.app.gui.app_state import SECRETS, WAITING
 from leapp_functions.app.gui.custom_widgets import (GAP, Caption, Card, Field, FileField,
                                                     LabeledEntry, OutlineButton, Tooltip,
-                                                    mark_line, show_example, two_columns)
+                                                    mark_line, open_menu, show_example,
+                                                    two_columns)
 from leapp_functions.app.output import default_output_folder_name
 from leapp_functions.app.platform import sanitize_file_name
 from scripts.raw_image import (RAW_IMAGE_FILE_PATTERNS, RAW_IMAGE_LABEL, confirm_found_members,
@@ -155,10 +156,7 @@ class SourceScreen(tk.Frame):
                     label=selection_text([history.format_path_for_display(path) for path in given]),
                     command=lambda given=given: self.state.set_source(given))
         button = self.recent_button
-        try:
-            menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
-        finally:
-            menu.grab_release()
+        open_menu(menu, button)
 
 
 class OutputCard(tk.Frame):
@@ -231,10 +229,7 @@ class OutputCard(tk.Frame):
                 menu.add_command(label=history.format_path_for_display(path),
                                  command=lambda path=path: output.set(path))
         button = self.recent_button
-        try:
-            menu.tk_popup(button.winfo_rootx(), button.winfo_rooty() + button.winfo_height())
-        finally:
-            menu.grab_release()
+        open_menu(menu, button)
 
 
 class SecretsCard(tk.Frame):
