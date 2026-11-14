@@ -91,6 +91,11 @@ def open_menu(menu, button):
 
     window = button.winfo_toplevel()
     bound = []
+    before = window.focus_get()
+
+    def give_focus_back():
+        if window.winfo_exists() and window.state() == "normal" and window.focus_displayof() is None:
+            (before if before is not None and before.winfo_exists() else window).focus_force()
 
     def close(event=None):
         if event is not None and event.type == tk.EventType.Configure and event.widget is not window:
@@ -99,6 +104,7 @@ def open_menu(menu, button):
             sequence, identifier = bound.pop()
             window.unbind(sequence, identifier)
         menu.unpost()
+        window.after_idle(give_focus_back)
 
     for sequence in ("<Configure>", "<Unmap>", "<ButtonPress>"):
         bound.append((sequence, window.bind(sequence, close, add="+")))
