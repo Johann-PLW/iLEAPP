@@ -48,8 +48,13 @@ def crunch(request):
 class MainWindow(tk.Tk):
     """ Main application window for the LEAPP GUI. """
 
-    def __init__(self):
-        """ Initialize the window, application state, and widgets. """
+    def __init__(self, show=True):
+        """ Initialize the window, application state, and widgets.
+
+        Args:
+            show (bool): False builds everything but never puts the window on screen, for
+                --selfcheck.
+        """
         super().__init__()
         self.title(f"{leapp.name} version {leapp.version}")
         self.icon = images.load("icon.png")
@@ -90,11 +95,11 @@ class MainWindow(tk.Tk):
 
         self.build()
         self.fix_size()
-        self.deiconify()
-        self.watch_unlock()
-        if sys.platform == "darwin":
-            # the window has to be on screen first
-            self.after(300, self.redraw)
+        if show:
+            self.deiconify()
+            self.watch_unlock()
+            if sys.platform == "darwin":
+                self.after(300, self.redraw)
 
     def on_wheel(self, event):
         """ The mouse wheel, anywhere in the window. """
@@ -248,9 +253,20 @@ class MainWindow(tk.Tk):
             action()
 
 
-if __name__ == "__main__":
-    check_runtime_dependencies()
-    main_window = MainWindow()
-    main_window.mainloop()
-    if main_window.app_state.run_status != "running":
-        quick_exit.window_closed()
+def selfcheck():
+    """ Build the window without showing it, then exit: a built binary is smoke tested with this
+    (packaging/build.py smoke). The line printed is the one smoke reads. """
+    window = MainWindow(show=False)
+    print(f"selfcheck passed: {len(window.app_state.artifacts.loader)} artifacts, "
+          f"Tk {window.tk.call('info', 'patchlevel')}")
+    window.destroy()
+    sys.exit(0)
+
+
+check_runtime_dependencies()
+if "--selfcheck" in sys.argv[1:]:
+    selfcheck()
+main_window = MainWindow()
+main_window.mainloop()
+if main_window.app_state.run_status != "running":
+    quick_exit.window_closed()
